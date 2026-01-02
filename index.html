@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DartsOS v8.2: Club Edition</title>
+    <title>DartsOS v10: Master</title>
     <style>
         :root {
             --bg: #121212; --panel: #1e1e1e; --primary: #00e676; --secondary: #2979ff; --danger: #ff1744;
@@ -49,7 +49,7 @@
 
 <div id="screen-menu" class="screen active">
     <header>
-        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v8.2</span></h1>
+        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v10</span></h1>
         <div style="display:flex; gap:10px;">
             <div id="settings-btn" class="icon-btn" onclick="Stats.exportData()">💾</div>
         </div>
@@ -132,20 +132,46 @@ const BOTS = [
     { name: "The Iceman", avg: 95, checkout: 0.9 }
 ];
 
-// --- STRATEGIST ---
+// --- STRATEGIST (SMART CHECKOUTS) ---
 const Strategist = {
-    getCheckout: function(e) {
-        if(e > 170 || e < 2) return "";
-        const t = {
-            170:"T20 T20 Bull", 167:"T20 T19 Bull", 164:"T20 T18 Bull", 161:"T20 T17 Bull",
-            160:"T20 T20 D20", 158:"T20 T20 D19", 156:"T20 T20 D18", 150:"T20 T18 D18",
-            140:"T20 T16 D16", 136:"T20 T20 D8", 132:"T20 T20 D6", 130:"T20 T18 D8",
-            126:"T19 T19 D6", 121:"T20 T11 D14", 120:"T20 20 D20", 116:"T20 16 D20",
-            110:"T20 10 D20", 100:"T20 D20", 96:"T20 D18", 90:"T18 D18",
-            82:"Bull D16", 80:"T20 D10", 76:"T20 D8", 72:"T16 D12", 70:"T18 D8",
-            60:"20 D20", 50:"10 D20", 40:"D20", 36:"D18", 32:"D16", 20:"D10", 16:"D8"
+    // Generates a checkout string for any score 170 or less
+    getCheckout: function(score) {
+        if (score > 170 || score < 2) return "";
+        
+        // 1. Check if it's a direct double (2-40 even, 50)
+        if (score === 50) return "Bullseye";
+        if (score <= 40 && score % 2 === 0) return "D" + (score / 2);
+
+        // 2. Check 2-dart finishes (Single/Treble + Double)
+        for (let first = 60; first >= 1; first--) {
+            // Iterate high to low to find best setup (T20, T19, etc)
+            // Valid first darts: 1-20, 25, 50, and their Triples/Doubles
+            // Simplified: Just check subtracting common big hits
+            
+            // Try Trebles (60, 57, 54...)
+            let rem = score - first;
+            if (rem >= 2 && rem <= 40 && rem % 2 === 0 && first % 3 === 0 && first <= 60) {
+                return "T" + (first/3) + " D" + (rem/2);
+            }
+            // Try Singles (for small finishes)
+            if (rem >= 2 && rem <= 40 && rem % 2 === 0 && first <= 20) {
+                return first + " D" + (rem/2);
+            }
+            // Try Bull (50) or Outer (25)
+            if (score - 50 >= 2 && (score - 50) % 2 === 0 && (score - 50) <= 40) return "Bull D" + ((score-50)/2);
+            if (score - 25 >= 2 && (score - 25) % 2 === 0 && (score - 25) <= 40) return "25 D" + ((score-25)/2);
+        }
+
+        // 3. Known 3-dart routes (Static List for common ones)
+        const routes = {
+            170: "T20 T20 Bull", 167: "T20 T19 Bull", 164: "T20 T18 Bull", 161: "T20 T17 Bull",
+            160: "T20 T20 D20", 158: "T20 T20 D19", 156: "T20 T20 D18", 150: "T20 T18 D18",
+            140: "T20 T16 D16", 136: "T20 T20 D8", 132: "T20 T20 D6", 130: "T20 T18 D8",
+            126: "T19 T19 D6", 121: "T20 T11 D14", 120: "T20 20 D20", 116: "T20 16 D20",
+            110: "T20 10 D20", 100: "T20 D20", 96: "T20 D18", 90: "T18 D18",
+            82: "Bull D16", 81: "T19 D12", 80: "T20 D10", 76: "T20 D8", 72: "T16 D12", 70: "T18 D8"
         };
-        return t[e] ? t[e] : (e <= 40 && e % 2 == 0 ? "D" + e/2 : "");
+        return routes[score] ? routes[score] : "No easy shot";
     }
 };
 
@@ -205,10 +231,10 @@ const Voice = {
 const Stats = {
     data: { matches: [], leagueRank: 0, drillLevel: 0, heatmap: [] },
     load: function() {
-        const e = localStorage.getItem("darts_v8");
+        const e = localStorage.getItem("darts_v10");
         e && (this.data = JSON.parse(e)), this.renderChart(), this.updateBadges()
     },
-    save: function() { localStorage.setItem("darts_v8", JSON.stringify(this.data)) },
+    save: function() { localStorage.setItem("darts_v10", JSON.stringify(this.data)) },
     addMatch: function(e, t) {
         this.data.matches.push({ avg: parseFloat(e), result: t, type: "x01" }), this.data.matches.length > 20 && this.data.matches.shift(), this.save()
     },
@@ -220,7 +246,7 @@ const Stats = {
         const e = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data)), t = document.createElement("a");
         t.setAttribute("href", e), t.setAttribute("download", "dartsos_backup.json"), document.body.appendChild(t), t.click(), t.remove()
     },
-    clear: function() { confirm("Wipe entire career history?") && (localStorage.removeItem("darts_v8"), location.reload()) },
+    clear: function() { confirm("Wipe entire career history?") && (localStorage.removeItem("darts_v10"), location.reload()) },
     renderChart: function() {
         const e = document.getElementById("chart-area"), t = this.data.matches.filter(e => "x01" === e.type);
         if (t.length < 2) return e.innerHTML = "<div style='padding:60px; text-align:center; color:#555;'>Play Tournament to see graph</div>", void(document.getElementById("current-avg-display").innerText = "Avg: --");
@@ -241,9 +267,10 @@ const BoardRenderer = {
     render: function(e, t = !1) {
         const o = document.getElementById("board-container");
         o.innerHTML = "";
+        // INCREASED VIEWBOX: 500x500 to fit labels
         const n = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        n.setAttribute("viewBox", "0 0 450 450"), n.id = "dartboard-svg";
-        const a = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5], r = 225;
+        n.setAttribute("viewBox", "0 0 500 500"), n.id = "dartboard-svg";
+        const a = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5], r = 250; // New Center
 
         function i(t, o, i, d, c) {
             const s = 360 / 20;
@@ -263,7 +290,8 @@ const BoardRenderer = {
             t.setAttribute("cx", e.x), t.setAttribute("cy", e.y), t.setAttribute("r", 2), t.setAttribute("fill", "rgba(255, 215, 0, 0.4)"), t.style.pointerEvents = "none", n.appendChild(t)
         }), a.forEach((e, t) => {
             const o = document.createElementNS("http://www.w3.org/2000/svg", "text"), a = (360 * t / 20 - 90) * Math.PI / 180;
-            o.setAttribute("x", r + 195 * Math.cos(a)), o.setAttribute("y", r + 195 * Math.sin(a)), o.setAttribute("text-anchor", "middle"), o.setAttribute("dominant-baseline", "middle"), o.setAttribute("fill", "white"), o.textContent = e, o.style.pointerEvents = "none", n.appendChild(o)
+            // Radius 205 puts text clearly outside the board
+            o.setAttribute("x", r + 205 * Math.cos(a)), o.setAttribute("y", r + 205 * Math.sin(a)), o.setAttribute("text-anchor", "middle"), o.setAttribute("dominant-baseline", "middle"), o.setAttribute("fill", "white"), o.setAttribute("font-size", "24"), o.setAttribute("font-weight", "bold"), o.textContent = e, o.style.pointerEvents = "none", n.appendChild(o)
         }), o.appendChild(n)
     }
 };
@@ -310,7 +338,7 @@ const app = {
         this.state.targetList = Array.from({length: 20}, ((e, t) => t + 1)), this.state.targetList.push(25), this.state.score = 27, document.getElementById("game-title").innerText = "Bob's 27", document.getElementById("hud-lbl-1").innerText = "SCORE", document.getElementById("hud-val-1").innerText = "27", document.getElementById("p2-box").style.visibility = "visible", document.getElementById("hud-lbl-2").innerText = "TARGET", document.getElementById("hud-val-2").innerText = "D1"
     },
     setupJDC: function() {
-        document.getElementById("game-title").innerText = "JDC Challenge", document.getElementById("hud-lbl-1").innerText = "SCORE", document.getElementById("hud-val-1").innerText = "0", document.getElementById("p2-box").style.visibility = "visible", document.getElementById("hud-lbl-2").innerText = "TASK", document.getElementById("hud-val-2").innerText = "10-15 Doubles"
+        document.getElementById("game-title").innerText = "JDC Academy", document.getElementById("hud-lbl-1").innerText = "SCORE", document.getElementById("hud-val-1").innerText = "0", document.getElementById("p2-box").style.visibility = "visible", document.getElementById("hud-lbl-2").innerText = "TASK", document.getElementById("hud-val-2").innerText = "Double 10", document.getElementById("checkout-display").innerText = "Dart 1/3"
     },
     handleHit: function(e, t, o) {
         if (o) {
@@ -371,7 +399,7 @@ const app = {
     logicJDC: function(e, t) {
         const o = this.state.jdcLevel;
         let n = 0;
-        o < 6 ? e >= 10 && e <= 15 && "D" === t && (n = e * 2) : o < 12 ? e >= 15 && e <= 20 && "T" === t && (n = e * 3) : 25 === e && (n = 50), n > 0 && (this.state.turnScore += n, this.state.score += n, Speaker.speak("Yes!", 60)), this.state.dartsInTurn++, this.state.dartsInTurn >= 3 && (this.state.jdcLevel++, this.state.dartsInTurn = 0, document.getElementById("hud-val-1").innerText = this.state.score, this.state.jdcLevel >= 15 && (alert("JDC Finished! Score: " + this.state.score), this.goHome()))
+        o < 6 ? e >= 10 && e <= 15 && "D" === t && (n = e * 2) : o < 12 ? e >= 15 && e <= 20 && "T" === t && (n = e * 3) : 25 === e && (n = 50), n > 0 && (this.state.turnScore += n, this.state.score += n, Speaker.speak("Yes!", 60)), this.state.dartsInTurn++, document.getElementById("checkout-display").innerText = "Dart " + (this.state.dartsInTurn + 1) + "/3", this.state.dartsInTurn >= 3 && (this.state.dartsInTurn = 0, this.state.jdcLevel++, document.getElementById("checkout-display").innerText = "Dart 1/3", this.state.jdcLevel > 12 ? (alert("JDC Finished! Score: " + this.state.score), this.goHome()) : document.getElementById("hud-val-2").innerText = this.state.jdcLevel < 6 ? "Double " + (10 + this.state.jdcLevel) : this.state.jdcLevel < 12 ? "Treble " + (15 + (this.state.jdcLevel - 6)) : "Bullseye"), document.getElementById("hud-val-1").innerText = this.state.score
     },
     handleAction: function() {
         if ("league" === this.mode) {
@@ -394,6 +422,7 @@ const app = {
         alert("Undo disabled in Pro Mode")
     }
 };
+Voice.init(), Stats.load();
 </script>
 </body>
 </html>
