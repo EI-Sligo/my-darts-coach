@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DartsOS v3: Career & Bot</title>
+    <title>DartsOS v5.1: The Caller</title>
     <style>
         :root {
             --bg: #121212;
@@ -41,7 +41,20 @@
             align-items: center;
             border-bottom: 1px solid #333;
         }
-        
+
+        .mic-btn {
+            background: #333; color: #aaa;
+            border: 1px solid #444; border-radius: 50%;
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; cursor: pointer; transition: all 0.2s;
+        }
+        .mic-btn.listening {
+            background: var(--danger); color: white; border-color: var(--danger);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
         .main-area {
             flex: 1;
             display: flex;
@@ -51,7 +64,7 @@
             overflow-y: auto;
         }
 
-        /* --- MENU & STATS --- */
+        /* --- MENU --- */
         .menu-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -68,19 +81,21 @@
             padding: 20px;
             text-align: center;
             cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
         .menu-card:active { transform: scale(0.98); border-color: var(--primary); }
 
-        .stats-container {
+        .chart-container {
             width: 100%;
             max-width: 600px;
-            background: #252525;
+            height: 150px;
+            background: #222;
             border-radius: 12px;
-            padding: 15px;
             margin-top: 10px;
+            position: relative;
+            border: 1px solid #333;
         }
-        .stat-row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 10px 0; }
-        .stat-val { font-weight: bold; color: var(--primary); }
 
         /* --- HUD --- */
         .hud-panel {
@@ -91,11 +106,16 @@
             display: flex; justify-content: space-between; align-items: center;
         }
 
-        .hud-score-box { text-align: center; }
+        .hud-score-box { text-align: center; flex: 1; }
         .hud-score { font-size: 2.5rem; font-weight: bold; color: var(--primary); }
         .hud-label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; }
-        
         .bot-score { color: var(--danger); }
+        
+        .checkout-hint {
+            background: #333; color: var(--highlight);
+            padding: 5px 10px; border-radius: 4px; font-size: 0.8rem;
+            margin-top: 5px; display: inline-block; min-height: 20px;
+        }
 
         /* --- BOARD & CONTROLS --- */
         #board-container {
@@ -114,81 +134,69 @@
         .btn-primary { background: var(--primary); color: black; }
         .btn-miss { background: #424242; color: #ff5252; border: 1px solid #ff5252; flex: 0.4; }
 
-        /* Drills UI */
-        .drill-instruction {
-            background: rgba(0, 230, 118, 0.1);
-            color: var(--primary);
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            text-align: center;
-            border: 1px solid var(--primary);
+        .rank-badge {
+            background: var(--highlight); color: black;
+            padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold;
+            position: absolute; top: 10px; right: 10px;
         }
+        
+        polyline { fill: none; stroke: var(--primary); stroke-width: 2; vector-effect: non-scaling-stroke; }
     </style>
 </head>
 <body>
 
     <div id="screen-menu" class="screen active">
         <header>
-            <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v3</span></h1>
+            <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">PRO</span></h1>
+            <div id="mic-toggle-menu" class="mic-btn" onclick="Voice.toggle()">🎙️</div>
         </header>
         <div class="main-area">
-            <h2 style="margin-top: 20px;">Training Modules</h2>
+            
+            <div style="width:100%; max-width:600px; display:flex; justify-content:space-between; align-items:end; margin-top:10px;">
+                <span style="font-size:0.9rem; color:#aaa;">Your Form (Last 10 Games)</span>
+                <span id="current-avg-display" style="font-weight:bold; color:var(--primary)">Avg: --</span>
+            </div>
+            <div class="chart-container" id="chart-area"></div>
+
+            <h2 style="margin-top: 20px;">Career Mode</h2>
             <div class="menu-grid">
-                <div class="menu-card" onclick="app.loadMode('career')">
-                    <span style="font-size:2rem">🎓</span><br><b>Career Drills</b><br><span style="font-size:0.8rem; color:#888">Unlocks & Levels</span>
+                <div class="menu-card" onclick="app.loadMode('league')">
+                    <span class="rank-badge" id="league-rank">ROOKIE</span>
+                    <span style="font-size:2rem">🏆</span><br><b>Bot League</b><br><span style="font-size:0.8rem; color:#888">Beat 5 Opponents</span>
                 </div>
-                <div class="menu-card" onclick="app.loadMode('x01')">
-                    <span style="font-size:2rem">🤖</span><br><b>Vs CPU Bot</b><br><span style="font-size:0.8rem; color:#888">501 Match Play</span>
+                <div class="menu-card" onclick="app.loadMode('bobs27')">
+                    <span style="font-size:2rem">☠️</span><br><b>Bob's 27</b><br><span style="font-size:0.8rem; color:#888">Pro Doubles Routine</span>
+                </div>
+                <div class="menu-card" onclick="app.loadMode('drills')">
+                    <span style="font-size:2rem">🎓</span><br><b>Skill Drills</b><br><span style="font-size:0.8rem; color:#888">Grouping & Aim</span>
                 </div>
                 <div class="menu-card" onclick="app.loadMode('practice')">
-                    <span style="font-size:2rem">🔥</span><br><b>Heatmap</b><br><span style="font-size:0.8rem; color:#888">Free Throw</span>
-                </div>
-                <div class="menu-card" onclick="app.loadMode('cricket')">
-                    <span style="font-size:2rem">🦗</span><br><b>Cricket</b><br><span style="font-size:0.8rem; color:#888">Count-Up</span>
+                    <span style="font-size:2rem">🔥</span><br><b>Free Throw</b><br><span style="font-size:0.8rem; color:#888">Heatmap Analysis</span>
                 </div>
             </div>
-
-            <div class="stats-container">
-                <h3 style="margin:0; border-bottom:1px solid #444; padding-bottom:10px;">Player Profile</h3>
-                <div class="stat-row">
-                    <span>Matches Played (X01)</span>
-                    <span class="stat-val" id="stat-matches">0</span>
-                </div>
-                <div class="stat-row">
-                    <span>Win Rate</span>
-                    <span class="stat-val" id="stat-wr">0%</span>
-                </div>
-                <div class="stat-row">
-                    <span>3-Dart Average</span>
-                    <span class="stat-val" id="stat-avg">0.0</span>
-                </div>
-                <div class="stat-row" style="border:none">
-                    <span>Career Level</span>
-                    <span class="stat-val" id="stat-level">1</span>
-                </div>
-                <button class="btn" style="padding:10px; font-size:0.8rem; margin-top:10px; background:#444;" onclick="Stats.clear()">Reset Stats</button>
-            </div>
+            
+            <button class="btn" style="background:#222; margin-top:10px; font-size:0.8rem" onclick="Stats.clear()">Reset Career</button>
         </div>
     </div>
 
     <div id="screen-game" class="screen">
         <header>
             <h1 id="game-title">Game</h1>
-            <button class="btn" style="width: auto; padding: 5px 15px; font-size: 0.8rem;" onclick="app.goHome()">Exit</button>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <div id="mic-toggle-game" class="mic-btn" onclick="Voice.toggle()">🎙️</div>
+                <button class="btn" style="width: auto; padding: 5px 15px; font-size: 0.8rem;" onclick="app.goHome()">Exit</button>
+            </div>
         </header>
 
         <div class="main-area">
             
-            <div id="drill-box" class="drill-instruction" style="display:none"></div>
-
             <div class="hud-panel">
                 <div class="hud-score-box">
                     <div class="hud-label" id="hud-lbl-1">YOU</div>
                     <div class="hud-score" id="hud-val-1">501</div>
-                    <div class="hud-label" id="hud-sub-1"></div>
+                    <div class="checkout-hint" id="checkout-display"></div>
                 </div>
-                <div class="hud-score-box">
+                <div class="hud-score-box" id="hud-box-2">
                     <div class="hud-label" id="hud-lbl-2">BOT</div>
                     <div class="hud-score bot-score" id="hud-val-2">501</div>
                     <div class="hud-label" id="hud-sub-2"></div>
@@ -208,382 +216,396 @@
 
 <script>
 
-// --- STATS SYSTEM (LocalStorage) ---
-const Stats = {
-    data: {
-        matches: 0,
-        wins: 0,
-        totalScore: 0,
-        totalDarts: 0,
-        careerLevel: 0
-    },
-    load: function() {
-        const s = localStorage.getItem('darts_stats_v3');
-        if(s) this.data = JSON.parse(s);
-        this.updateUI();
-    },
-    save: function() {
-        localStorage.setItem('darts_stats_v3', JSON.stringify(this.data));
-        this.updateUI();
-    },
-    recordMatch: function(win, scoreTotal, dartsThrown) {
-        this.data.matches++;
-        if(win) this.data.wins++;
-        this.data.totalScore += scoreTotal;
-        this.data.totalDarts += dartsThrown;
-        this.save();
-    },
-    updateLevel: function(lvl) {
-        if(lvl > this.data.careerLevel) {
-            this.data.careerLevel = lvl;
-            this.save();
-        }
-    },
-    clear: function() {
-        if(confirm("Reset all history?")) {
-            localStorage.removeItem('darts_stats_v3');
-            location.reload();
-        }
-    },
-    updateUI: function() {
-        document.getElementById('stat-matches').innerText = this.data.matches;
-        document.getElementById('stat-level').innerText = "Lvl " + (this.data.careerLevel + 1);
-        
-        let wr = 0;
-        if(this.data.matches > 0) wr = Math.round((this.data.wins / this.data.matches) * 100);
-        document.getElementById('stat-wr').innerText = wr + "%";
-
-        let avg = 0;
-        if(this.data.totalDarts > 0) avg = ((this.data.totalScore / this.data.totalDarts) * 3).toFixed(1);
-        document.getElementById('stat-avg').innerText = avg;
-    }
-};
-
-// --- AUDIO ---
+// --- THE CALLER (AUDIO ATMOSPHERE) ---
 const Speaker = {
-    speak: function(text) {
+    speak: function(text, scoreValue) {
         window.speechSynthesis.cancel();
+        
+        // Custom 180 Shout
+        if(scoreValue === 180) {
+            const u = new SpeechSynthesisUtterance("ONE HUNDRED AND EIGHTY!");
+            u.pitch = 0.8; u.rate = 0.8; u.volume = 1;
+            window.speechSynthesis.speak(u);
+            return;
+        }
+
         const u = new SpeechSynthesisUtterance(text);
+        
+        // Dynamic Voice based on score intensity
+        if(scoreValue >= 100) {
+            u.pitch = 0.9; u.rate = 0.9; // Deep and slow
+        } else if (scoreValue >= 60) {
+            u.pitch = 1.0; u.rate = 1.0; // Standard
+        } else {
+            u.pitch = 1.1; u.rate = 1.2; // Fast for low scores
+        }
+        
         window.speechSynthesis.speak(u);
     }
 };
 
-// --- DRILLS DATA ---
+// --- VOICE RECOGNITION ---
+const Voice = {
+    recognition: null, isListening: false,
+    init: function() {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert("Voice not supported in this browser."); return;
+        }
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        this.recognition = new SpeechRecognition();
+        this.recognition.continuous = true;
+        this.recognition.interimResults = false;
+        this.recognition.lang = 'en-US';
+        this.recognition.onresult = (e) => this.processCommand(e.results[e.results.length - 1][0].transcript);
+        this.recognition.onend = () => { if(this.isListening) this.recognition.start(); };
+    },
+    toggle: function() {
+        if(!this.recognition) this.init();
+        if(!this.recognition) return;
+        if(this.isListening) { this.recognition.stop(); this.isListening = false; } 
+        else { this.recognition.start(); this.isListening = true; }
+        const cls = this.isListening ? 'mic-btn listening' : 'mic-btn';
+        document.getElementById('mic-toggle-menu').className = cls;
+        document.getElementById('mic-toggle-game').className = cls;
+    },
+    processCommand: function(raw) {
+        const text = raw.toLowerCase().trim();
+        if(text.includes('next')) { app.handleAction(); return; }
+        if(text.includes('undo')) { app.undo(); return; }
+        if(text.includes('miss')) { app.handleHit(0, 'MISS', null); return; }
+
+        let type = 'S';
+        if(text.includes('double')) type = 'D';
+        if(text.includes('triple') || text.includes('treble')) type = 'T';
+
+        let score = 0;
+        
+        // --- IMPROVED PARSING LOGIC ---
+        if(text.includes('bullseye')) { score = 25; type = 'D'; } // Inner Bull (Double 25)
+        else if(text.includes('50')) { score = 25; type = 'D'; } // Explicit 50 (Inner)
+        else if(text.includes('25')) { score = 25; type = 'S'; } // Explicit 25 (Outer)
+        else if(text.includes('bull')) { score = 25; type = 'D'; } // "Bull" usually implies Inner
+        else {
+            const match = text.match(/(\d+)/);
+            if(match) score = parseInt(match[0]);
+            else {
+                const words = {"one":1, "two":2, "three":3, "four":4, "five":5, "six":6, "seven":7, "eight":8, "nine":9, "ten":10, "twenty":20};
+                for(let w in words) { if(text.includes(w)) score = words[w]; }
+            }
+        }
+
+        if(score > 0 && score <= 25) {
+            // Check illegal triples
+            if(score === 25 && type === 'T') return; 
+            app.handleHit(score, type, null);
+        }
+    }
+};
+
+// --- DATA ---
+const CHECKOUTS = {
+    170: "T20 T20 Bull", 167: "T20 T19 Bull", 164: "T20 T18 Bull", 161: "T20 T17 Bull",
+    160: "T20 T20 D20", 158: "T20 T20 D19", 156: "T20 T20 D18", 150: "T20 T18 D18",
+    140: "T20 T16 D16", 130: "T20 T18 D8", 121: "T20 T11 D14", 120: "T20 20 D20",
+    110: "T20 10 D20", 100: "T20 D20", 90: "T18 D18", 80: "T20 D10", 70: "T18 D8",
+    60: "20 D20", 50: "10 D20", 40: "D20", 36: "D18", 32: "D16", 16: "D8", 8: "D4", 4: "D2", 2: "D1"
+};
 const DRILLS = [
     { title: "Calibration", desc: "Hit any Single number 10 times.", target: 'any', count: 10 },
     { title: "Grouping 20", desc: "Hit the 20 wedge (S/D/T) 5 times.", target: 20, count: 5 },
-    { title: "Round the Clock 1-5", desc: "Hit 1, 2, 3, 4, 5 in order.", sequence: [1,2,3,4,5] },
-    { title: "Bullseye Hunter", desc: "Hit the Bull (Green or Red) 3 times.", target: 25, count: 3 },
-    { title: "Heavy Scoring", desc: "Score 100+ points in one turn (3 darts).", type: 'score_burst', goal: 100 }
+    { title: "Clock 1-5", desc: "Hit 1, 2, 3, 4, 5 in order.", sequence: [1,2,3,4,5] },
+    { title: "Bullseye", desc: "Hit the Bull (Green or Red) 3 times.", target: 25, count: 3 }
+];
+const BOTS = [
+    { name: "Pub Rookie", avg: 35, checkout: 0.1 },
+    { name: "Local Champ", avg: 45, checkout: 0.2 },
+    { name: "County Player", avg: 55, checkout: 0.4 },
+    { name: "Semi-Pro", avg: 70, checkout: 0.6 },
+    { name: "The Iceman", avg: 95, checkout: 0.9 }
 ];
 
-// --- SVG BOARD ---
+// --- STATS ---
+const Stats = {
+    data: { matches: [], leagueRank: 0, drillLevel: 0 },
+    load: function() {
+        const s = localStorage.getItem('darts_v5');
+        if(s) this.data = JSON.parse(s);
+        this.renderChart(); this.updateBadges();
+    },
+    save: function() { localStorage.setItem('darts_v5', JSON.stringify(this.data)); },
+    addMatch: function(avg, result, type) {
+        this.data.matches.push({ avg: parseFloat(avg), result, type, date: Date.now() });
+        if(this.data.matches.length > 20) this.data.matches.shift();
+        this.save();
+    },
+    updateLeague: function(defeatedRank) { if(defeatedRank === this.data.leagueRank) { this.data.leagueRank++; this.save(); } },
+    updateDrill: function() { this.data.drillLevel++; this.save(); },
+    clear: function() { if(confirm("Wipe entire career history?")) { localStorage.removeItem('darts_v5'); location.reload(); } },
+    renderChart: function() {
+        const ctx = document.getElementById('chart-area');
+        const matches = this.data.matches.filter(m => m.type === 'x01'); 
+        if(matches.length < 2) {
+            ctx.innerHTML = "<div style='padding:60px; text-align:center; color:#555;'>Play League matches to see graph</div>";
+            document.getElementById('current-avg-display').innerText = "Avg: --";
+            return;
+        }
+        const avgs = matches.map(m => m.avg);
+        const max = Math.max(...avgs) + 5; const min = Math.max(0, Math.min(...avgs) - 5);
+        const w = 600, h = 150; let pts = "";
+        avgs.forEach((val, i) => {
+            const x = (i / (avgs.length - 1)) * w; const y = h - ((val - min) / (max - min)) * h;
+            pts += `${x},${y} `;
+        });
+        const last3 = avgs.slice(-3);
+        const curr = (last3.reduce((a,b)=>a+b,0) / last3.length).toFixed(1);
+        document.getElementById('current-avg-display').innerText = "Avg: " + curr;
+        ctx.innerHTML = `<svg width="100%" height="100%" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><line x1="0" y1="${h/2}" x2="${w}" y2="${h/2}" stroke="#333" stroke-dasharray="4" /><polyline points="${pts}" /></svg>`;
+    },
+    updateBadges: function() {
+        const ranks = ["ROOKIE", "AMATEUR", "SEMI-PRO", "PRO", "ELITE"];
+        document.getElementById('league-rank').innerText = ranks[Math.min(4, this.data.leagueRank)];
+    }
+};
+
+// --- BOARD RENDERER ---
 const BoardRenderer = {
     render: function(cb) {
-        const c = document.getElementById('board-container');
-        c.innerHTML = '';
+        const c = document.getElementById('board-container'); c.innerHTML = '';
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.setAttribute("viewBox", "0 0 450 450");
-        svg.id = "dartboard-svg";
-        
+        svg.setAttribute("viewBox", "0 0 450 450"); svg.id = "dartboard-svg";
         const sectors = [20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];
         const C = 225;
-
-        // Draw Helper
         function ring(r1, r2, type, c1, c2) {
             const angle = 360/20;
             sectors.forEach((s, i) => {
                 const a1 = (i*angle - angle/2) * Math.PI/180 - Math.PI/2;
                 const a2 = (i*angle + angle/2) * Math.PI/180 - Math.PI/2;
-                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
                 const d = `M${C+r1*Math.cos(a1)},${C+r1*Math.sin(a1)} L${C+r2*Math.cos(a1)},${C+r2*Math.sin(a1)} A${r2},${r2} 0 0,1 ${C+r2*Math.cos(a2)},${C+r2*Math.sin(a2)} L${C+r1*Math.cos(a2)},${C+r1*Math.sin(a2)} A${r1},${r1} 0 0,0 ${C+r1*Math.cos(a1)},${C+r1*Math.sin(a1)}Z`;
-                path.setAttribute("d", d);
-                path.setAttribute("fill", i%2===0 ? c1 : c2);
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute("d", d); path.setAttribute("fill", i%2===0 ? c1 : c2);
                 path.onclick = (e) => cb(s, type, e);
                 svg.appendChild(path);
             });
         }
+        ring(162, 170, 'D', '#e53935', '#43a047'); ring(107, 162, 'S', '#121212', '#eeeeee');
+        ring(99, 107, 'T', '#e53935', '#43a047'); ring(16, 99, 'S', '#121212', '#eeeeee');
         
-        ring(162, 170, 'D', '#e53935', '#43a047');
-        ring(107, 162, 'S', '#121212', '#eeeeee');
-        ring(99, 107, 'T', '#e53935', '#43a047');
-        ring(16, 99, 'S', '#121212', '#eeeeee');
-        
-        // Bulls
+        // OUTER BULL (25)
         const b1 = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         b1.setAttribute("cx", C); b1.setAttribute("cy", C); b1.setAttribute("r", 16); b1.setAttribute("fill", "#43a047");
-        b1.onclick = (e) => cb(25, 'S', e);
-        svg.appendChild(b1);
+        b1.onclick = (e) => cb(25, 'S', e); svg.appendChild(b1);
         
+        // INNER BULL (50 -> D25)
         const b2 = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         b2.setAttribute("cx", C); b2.setAttribute("cy", C); b2.setAttribute("r", 6); b2.setAttribute("fill", "#e53935");
-        b2.onclick = (e) => cb(50, 'D', e);
-        svg.appendChild(b2);
-
-        // Labels
+        b2.onclick = (e) => cb(25, 'D', e); svg.appendChild(b2);
+        
         sectors.forEach((s,i) => {
              const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
              const ang = (i * 360/20 - 90) * Math.PI/180;
-             txt.setAttribute("x", C + 195 * Math.cos(ang));
-             txt.setAttribute("y", C + 195 * Math.sin(ang));
-             txt.setAttribute("text-anchor", "middle");
-             txt.setAttribute("dominant-baseline", "middle");
-             txt.setAttribute("fill", "white");
-             txt.textContent = s;
-             txt.style.pointerEvents = "none";
+             txt.setAttribute("x", C + 195 * Math.cos(ang)); txt.setAttribute("y", C + 195 * Math.sin(ang));
+             txt.setAttribute("text-anchor", "middle"); txt.setAttribute("dominant-baseline", "middle");
+             txt.setAttribute("fill", "white"); txt.textContent = s; txt.style.pointerEvents = "none";
              svg.appendChild(txt);
         });
-
         c.appendChild(svg);
     }
 };
 
 // --- APP LOGIC ---
 const app = {
-    mode: null,
-    state: {},
-    
+    mode: null, state: {},
     goHome: function() {
         document.getElementById('screen-game').classList.remove('active');
         document.getElementById('screen-menu').classList.add('active');
-        Stats.load(); // Refresh stats on menu
+        Stats.load(); 
     },
-
     loadMode: function(m) {
         this.mode = m;
-        this.state = { 
-            score: 501, 
-            botScore: 501, 
-            dartsInTurn: 0, 
-            turnScore: 0,
-            botHistory: [],
-            history: [],
-            drillIdx: Stats.data.careerLevel,
-            drillProgress: 0
-        };
-
+        this.state = { score: 0, dartsInTurn: 0, turnScore: 0, botScore: 0, totalScore: 0, totalDarts: 0, targetList: [], targetIndex: 0, drillProgress: 0 };
         document.getElementById('screen-menu').classList.remove('active');
         document.getElementById('screen-game').classList.add('active');
-        document.getElementById('drill-box').style.display = 'none';
-        
         BoardRenderer.render(this.handleHit.bind(this));
-
-        // Setup UI based on mode
-        if(m === 'x01') {
-            document.getElementById('game-title').innerText = "Bot Match";
-            document.getElementById('hud-lbl-2').innerText = "BOT (AVG 45)";
-            this.updateX01UI();
-            document.getElementById('btn-next').innerText = "Confirm Turn";
-        } else if (m === 'career') {
-            document.getElementById('game-title').innerText = "Career Drill";
-            this.loadDrill();
-            document.getElementById('btn-next').innerText = "Reset Drill";
-        } else {
+        document.getElementById('hud-box-2').style.visibility = 'hidden';
+        document.getElementById('btn-next').innerText = "Next Round";
+        document.getElementById('checkout-display').innerText = "";
+        
+        if(m === 'league') this.setupLeague();
+        else if (m === 'bobs27') this.setupBobs27();
+        else if (m === 'drills') this.setupDrills();
+        else {
             document.getElementById('game-title').innerText = "Practice";
+            document.getElementById('hud-lbl-1').innerText = "THROWS";
             document.getElementById('hud-val-1').innerText = "0";
-            document.getElementById('hud-lbl-2').innerText = "";
-            document.getElementById('hud-val-2').innerText = "";
             document.getElementById('btn-next').innerText = "Clear Board";
         }
     },
-
-    loadDrill: function() {
-        if(this.state.drillIdx >= DRILLS.length) {
-            alert("All drills complete! You are a master.");
-            this.goHome();
-            return;
-        }
-        const d = DRILLS[this.state.drillIdx];
-        document.getElementById('drill-box').style.display = 'block';
-        document.getElementById('drill-box').innerHTML = `<b>Lvl ${this.state.drillIdx+1}: ${d.title}</b><br>${d.desc}`;
-        
-        document.getElementById('hud-lbl-1').innerText = "PROGRESS";
-        document.getElementById('hud-lbl-2').innerText = "GOAL";
-        
-        this.updateDrillUI();
+    setupLeague: function() {
+        const rank = Math.min(4, Stats.data.leagueRank);
+        const bot = BOTS[rank];
+        this.state = { ...this.state, score: 501, botScore: 501, botIdx: rank };
+        document.getElementById('game-title').innerText = `Vs ${bot.name}`;
+        document.getElementById('hud-box-2').style.visibility = 'visible';
+        document.getElementById('hud-lbl-1').innerText = "YOU"; document.getElementById('hud-val-1').innerText = "501";
+        document.getElementById('hud-lbl-2').innerText = "OPPONENT"; document.getElementById('hud-val-2').innerText = "501";
+        document.getElementById('btn-next').innerText = "Confirm Turn";
+    },
+    setupBobs27: function() {
+        this.state.targetList = Array.from({length:20}, (_, i) => i + 1); this.state.targetList.push(25); 
+        this.state.score = 27;
+        document.getElementById('game-title').innerText = "Bob's 27";
+        document.getElementById('hud-lbl-1').innerText = "SCORE"; document.getElementById('hud-val-1').innerText = "27";
+        document.getElementById('hud-box-2').style.visibility = 'visible';
+        document.getElementById('hud-lbl-2').innerText = "TARGET"; document.getElementById('hud-val-2').innerText = "D1";
+        document.getElementById('btn-next').innerText = "Next Double";
+    },
+    setupDrills: function() {
+        const lvl = Math.min(Stats.data.drillLevel, DRILLS.length - 1);
+        const d = DRILLS[lvl];
+        this.state.drillIdx = lvl;
+        document.getElementById('game-title').innerText = `Drill: ${d.title}`;
+        document.getElementById('hud-lbl-1').innerText = "PROGRESS"; document.getElementById('hud-val-1').innerText = "0";
+        document.getElementById('hud-box-2').style.visibility = 'visible';
+        document.getElementById('hud-lbl-2').innerText = "GOAL"; document.getElementById('hud-val-2').innerText = d.count || "Seq";
+        document.getElementById('hud-sub-2').innerText = d.desc; document.getElementById('btn-next').innerText = "Reset Drill";
     },
 
     handleHit: function(score, type, e) {
-        // Visuals
-        if(this.mode !== 'x01' && e) {
+        if(e) {
             const svg = document.getElementById('dartboard-svg');
             const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
             const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
             const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             dot.setAttribute("cx", svgP.x); dot.setAttribute("cy", svgP.y); dot.setAttribute("r", 4);
-            dot.setAttribute("fill", "#ffd700");
-            svg.appendChild(dot);
+            dot.setAttribute("fill", "#ffd700"); svg.appendChild(dot);
         }
 
         let pts = score;
-        if(type==='D') pts *=2;
-        if(type==='T') pts *=3;
+        if(type==='D') pts *=2; if(type==='T') pts *=3;
         
-        document.getElementById('status-msg').innerText = `Last: ${type}${score} (${pts})`;
+        let label = (type === 'T' ? 'T' : type === 'D' ? 'D' : '') + score;
+        if(score === 25 && type === 'D') label = "BULL (50)";
+        if(score === 25 && type === 'S') label = "25";
+        document.getElementById('status-msg').innerText = `Hit: ${label}`;
 
-        if(this.mode === 'x01') this.logicX01(pts, type);
-        if(this.mode === 'career') this.logicCareer(pts, score, type);
+        if(this.mode === 'league') this.logicLeague(pts, type);
+        if(this.mode === 'bobs27') this.logicBobs(score, type);
+        if(this.mode === 'drills') this.logicDrills(score, type);
         if(this.mode === 'practice') {
-            this.state.turnScore += pts;
-            document.getElementById('hud-val-1').innerText = this.state.turnScore;
+            this.state.totalDarts++; document.getElementById('hud-val-1').innerText = this.state.totalDarts;
         }
     },
 
-    logicX01: function(pts, type) {
-        if(this.state.dartsInTurn >= 3) return; // Wait for next turn
-        
+    logicLeague: function(pts, type) {
+        if(this.state.dartsInTurn >= 3) return;
         this.state.dartsInTurn++;
         const left = this.state.score - pts;
-
+        
         if(left === 0 && type === 'D') {
-            this.state.score = 0;
-            Stats.recordMatch(true, 501, 15); // Rough avg darts
-            alert("YOU WIN!");
-            this.goHome();
-            return;
-        }
-
-        if(left <= 1 && left !== 0) {
-            Speaker.speak("Bust!");
-            this.state.turnScore = 0; // Invalid
-            this.state.dartsInTurn = 3; // End turn immediately
-        } else {
-            this.state.score = left;
-            this.state.turnScore += pts;
-            Speaker.speak(`${pts}`);
+            const avg = ((501 / (this.state.totalDarts + this.state.dartsInTurn)) * 3).toFixed(1);
+            Stats.addMatch(avg, 'W', 'x01'); Stats.updateLeague(this.state.botIdx);
+            Speaker.speak("Game Shot", 100);
+            alert(`VICTORY! Match Avg: ${avg}`); this.goHome(); return;
         }
         
-        this.updateX01UI();
+        if(left <= 1 && left !== 0) {
+            Speaker.speak("Bust!", 0); this.state.turnScore = 0; this.state.dartsInTurn = 3; 
+        } else {
+            this.state.score = left; this.state.turnScore += pts; Speaker.speak(`${pts}`, pts);
+        }
+        document.getElementById('hud-val-1').innerText = this.state.score;
+        document.getElementById('hud-sub-1').innerText = `${3-this.state.dartsInTurn} left`;
+        const hint = CHECKOUTS[this.state.score];
+        document.getElementById('checkout-display').innerText = hint ? hint : "";
+    },
+
+    logicBobs: function(score, type) {
+        if(this.state.dartsInTurn >= 3) return;
+        this.state.dartsInTurn++;
+        const target = this.state.targetList[this.state.targetIndex];
+        const isBull = target === 25;
+        let hitVal = 0;
+        
+        // Inner Bull is Double 25
+        if(isBull && score===25 && type==='D') hitVal = 50; 
+        else if(!isBull && score===target && type==='D') hitVal = score * 2;
+
+        if(hitVal > 0) { this.state.turnScore += hitVal; this.state.score += hitVal; Speaker.speak("Yes!", 60); } 
+        else { Speaker.speak("Miss", 0); }
+        document.getElementById('hud-val-1').innerText = this.state.score;
+    },
+
+    logicDrills: function(score, type) {
+        const d = DRILLS[this.state.drillIdx];
+        let hit = false;
+        if(d.sequence) { if(score === d.sequence[this.state.drillProgress]) hit = true; } 
+        else if (d.target) {
+            if(d.target === 'any' && type === 'S') hit = true;
+            else if (d.target===25 && score===25) hit = true; // Inner or Outer Bull counts
+            else if (score === d.target) hit = true;
+        }
+        if(hit) {
+            this.state.drillProgress++; Speaker.speak("Good", 60);
+            document.getElementById('hud-val-1').innerText = this.state.drillProgress;
+            const goal = d.count || d.sequence.length;
+            if(this.state.drillProgress >= goal) {
+                Speaker.speak("Drill Passed", 100); alert("Drill Complete!"); Stats.updateDrill(); this.goHome();
+            }
+        }
     },
 
     handleAction: function() {
-        if(this.mode === 'x01') {
-            // Player turn over, Bot turn
-            if(this.state.dartsInTurn === 0) return; // Don't skip if haven't thrown
-            
-            this.state.dartsInTurn = 0;
-            this.state.turnScore = 0;
-            document.getElementById('status-msg').innerText = "Bot is throwing...";
-            
-            // SIMULATE BOT (Avg 45 points per turn + random variance)
+        if(this.mode === 'league') {
+            if(this.state.dartsInTurn === 0) return;
+            this.state.totalScore += this.state.turnScore; this.state.totalDarts += 3;
+            document.getElementById('status-msg').innerText = "Opponent throwing...";
+            const bot = BOTS[this.state.botIdx];
             setTimeout(() => {
-                const botPts = Math.floor(Math.random() * 40) + 30; // 30-70 pts
-                const botLeft = this.state.botScore - botPts;
-                
-                if(botLeft <= 1) {
-                    // Bot Checkout Logic Check
-                    if(Math.random() > 0.7) { // 30% chance to miss checkout
-                        this.state.botScore = 0;
-                        Stats.recordMatch(false, 501 - this.state.score, 20);
-                        alert("Bot Wins. Unlucky.");
-                        this.goHome();
-                        return;
-                    }
-                    this.state.botScore = 20; // Bot missed double, set to safe
-                } else {
-                    this.state.botScore = botLeft;
+                const variance = Math.floor(Math.random() * 20) - 10;
+                let botPts = bot.avg + variance;
+                if(this.state.botScore - botPts <= 1) {
+                    if(Math.random() < bot.checkout) {
+                        alert(`${bot.name} checks out. You Lost.`);
+                        const avg = ((this.state.totalScore / this.state.totalDarts) * 3).toFixed(1);
+                        Stats.addMatch(avg, 'L', 'x01'); this.goHome(); return;
+                    } else { botPts = 0; }
                 }
-                
-                Speaker.speak(`Bot scored ${botPts}`);
-                this.updateX01UI();
+                this.state.botScore -= botPts;
+                Speaker.speak(`${bot.name} scored ${botPts}`, botPts);
+                document.getElementById('hud-val-2').innerText = this.state.botScore;
                 document.getElementById('status-msg').innerText = "Your Turn";
+                this.state.dartsInTurn = 0; this.state.turnScore = 0;
+                BoardRenderer.render(this.handleHit.bind(this));
             }, 1000);
         }
-        else if (this.mode === 'practice') {
-             BoardRenderer.render(this.handleHit.bind(this));
-             this.state.turnScore = 0;
-             document.getElementById('hud-val-1').innerText = "0";
-        }
-        else if (this.mode === 'career') {
-            // Reset drill
-            this.state.drillProgress = 0;
-            this.state.turnScore = 0;
-            this.state.dartsInTurn = 0;
-            this.updateDrillUI();
+        else if (this.mode === 'bobs27') {
+            if(this.state.turnScore === 0) {
+                const target = this.state.targetList[this.state.targetIndex];
+                const penalty = (target === 25) ? 25 : (target * 2);
+                this.state.score -= penalty; Speaker.speak(`Minus ${penalty}`, 0);
+            }
+            if(this.state.score < 0) { alert("BUST! Game Over."); this.goHome(); return; }
+            this.state.targetIndex++;
+            if(this.state.targetIndex >= this.state.targetList.length) { alert(`Finished! Final Score: ${this.state.score}`); this.goHome(); return; }
+            const nextT = this.state.targetList[this.state.targetIndex];
+            const label = (nextT === 25) ? "Bull" : `D${nextT}`;
+            document.getElementById('hud-val-1').innerText = this.state.score;
+            document.getElementById('hud-val-2').innerText = label;
+            this.state.dartsInTurn = 0; this.state.turnScore = 0;
             BoardRenderer.render(this.handleHit.bind(this));
         }
-    },
-
-    updateX01UI: function() {
-        document.getElementById('hud-val-1').innerText = this.state.score;
-        document.getElementById('hud-val-2').innerText = this.state.botScore;
-        document.getElementById('hud-sub-1').innerText = `${3 - this.state.dartsInTurn} Darts Left`;
-    },
-
-    logicCareer: function(pts, raw, type) {
-        const d = DRILLS[this.state.drillIdx];
-        let success = false;
-
-        // Sequence Drill
-        if(d.sequence) {
-            const target = d.sequence[this.state.drillProgress];
-            if(raw === target) {
-                this.state.drillProgress++;
-                Speaker.speak(`Hit ${raw}`);
-            }
-            if(this.state.drillProgress >= d.sequence.length) success = true;
-        } 
-        // Simple Target Count
-        else if (d.target) {
-            if((d.target === 'any' && type === 'S') || raw === d.target || (d.target===25 && raw>=25)) {
-                this.state.drillProgress++;
-                Speaker.speak("Yes");
-            }
-            if(this.state.drillProgress >= d.count) success = true;
+        else if (this.mode === 'drills') {
+             this.state.drillProgress = 0; document.getElementById('hud-val-1').innerText = "0"; BoardRenderer.render(this.handleHit.bind(this));
         }
-        // Score Burst
-        else if (d.type === 'score_burst') {
-            this.state.dartsInTurn++;
-            this.state.turnScore += pts;
-            if(this.state.dartsInTurn === 3) {
-                if(this.state.turnScore >= d.goal) success = true;
-                else {
-                    Speaker.speak(`${this.state.turnScore}. Too low.`);
-                    this.state.turnScore = 0;
-                    this.state.dartsInTurn = 0;
-                    // Auto-reset visuals
-                    BoardRenderer.render(this.handleHit.bind(this));
-                }
-            }
-        }
-
-        this.updateDrillUI();
-
-        if(success) {
-            Speaker.speak("Drill Passed!");
-            alert("Level Complete!");
-            this.state.drillIdx++;
-            Stats.updateLevel(this.state.drillIdx);
-            this.state.drillProgress = 0;
-            this.state.turnScore = 0;
-            this.state.dartsInTurn = 0;
-            this.loadDrill();
+        else {
+            BoardRenderer.render(this.handleHit.bind(this)); this.state.totalDarts = 0; document.getElementById('hud-val-1').innerText = "0";
         }
     },
-
-    updateDrillUI: function() {
-        const d = DRILLS[this.state.drillIdx];
-        if(d.type === 'score_burst') {
-             document.getElementById('hud-val-1').innerText = this.state.turnScore;
-             document.getElementById('hud-val-2').innerText = d.goal;
-             document.getElementById('hud-sub-1').innerText = "Current Turn";
-        } else if (d.sequence) {
-             const nextT = d.sequence[this.state.drillProgress] || "Finish";
-             document.getElementById('hud-val-1').innerText = nextT;
-             document.getElementById('hud-val-2').innerText = "Target";
-             document.getElementById('hud-sub-1').innerText = `Step ${this.state.drillProgress + 1}`;
-        } else {
-             document.getElementById('hud-val-1').innerText = this.state.drillProgress;
-             document.getElementById('hud-val-2').innerText = d.count;
-             document.getElementById('hud-sub-1').innerText = "Hits";
-        }
-    },
-
-    undo: function() { alert("Undo disabled in this version."); }
+    
+    undo: function() { alert("Undo disabled in Pro Mode (Touch-move rule!)"); }
 };
 
-// Init
-Stats.load();
+Voice.init(); Stats.load();
 </script>
 </body>
 </html>
