@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DartsOS v3: Career & Bot</title>
+    <style>
+        :root {
+            --bg: #121212;
+            --panel: #1e1e1e;
+            --primary: #00e676;
+            --secondary: #2979ff;
+            --danger: #ff1744;
+            --text-main: #ffffff;
+            --text-dim: #b0bec5;
+            --highlight: #ffd700;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* --- LAYOUTS --- */
+        .screen { display: none; flex-direction: column; height: 100%; width: 100%; }
+        .screen.active { display: flex; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        header {
+            padding: 15px;
+            background: var(--panel);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #333;
+        }
+        
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        /* --- MENU & STATS --- */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+        }
+
+        .menu-card {
+            background: var(--panel);
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .menu-card:active { transform: scale(0.98); border-color: var(--primary); }
+
+        .stats-container {
+            width: 100%;
+            max-width: 600px;
+            background: #252525;
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        .stat-row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 10px 0; }
+        .stat-val { font-weight: bold; color: var(--primary); }
+
+        /* --- HUD --- */
+        .hud-panel {
+            width: 100%; max-width: 600px;
+            background: var(--panel);
+            border-radius: 12px; padding: 15px;
+            margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .hud-score-box { text-align: center; }
+        .hud-score { font-size: 2.5rem; font-weight: bold; color: var(--primary); }
+        .hud-label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; }
+        
+        .bot-score { color: var(--danger); }
+
+        /* --- BOARD & CONTROLS --- */
+        #board-container {
+            width: 100%; max-width: 450px; 
+            aspect-ratio: 1/1; position: relative;
+            margin: 10px 0; flex-shrink: 0;
+        }
+        svg { width: 100%; height: 100%; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
+
+        .controls { display: flex; gap: 10px; width: 100%; max-width: 450px; padding-bottom: 20px; margin-top: auto; }
+        .btn {
+            flex: 1; padding: 15px; border: none; border-radius: 8px;
+            font-weight: bold; font-size: 1rem; cursor: pointer;
+            background: #333; color: white;
+        }
+        .btn-primary { background: var(--primary); color: black; }
+        .btn-miss { background: #424242; color: #ff5252; border: 1px solid #ff5252; flex: 0.4; }
+
+        /* Drills UI */
+        .drill-instruction {
+            background: rgba(0, 230, 118, 0.1);
+            color: var(--primary);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            text-align: center;
+            border: 1px solid var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="screen-menu" class="screen active">
+        <header>
+            <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v3</span></h1>
+        </header>
+        <div class="main-area">
+            <h2 style="margin-top: 20px;">Training Modules</h2>
+            <div class="menu-grid">
+                <div class="menu-card" onclick="app.loadMode('career')">
+                    <span style="font-size:2rem">🎓</span><br><b>Career Drills</b><br><span style="font-size:0.8rem; color:#888">Unlocks & Levels</span>
+                </div>
+                <div class="menu-card" onclick="app.loadMode('x01')">
+                    <span style="font-size:2rem">🤖</span><br><b>Vs CPU Bot</b><br><span style="font-size:0.8rem; color:#888">501 Match Play</span>
+                </div>
+                <div class="menu-card" onclick="app.loadMode('practice')">
+                    <span style="font-size:2rem">🔥</span><br><b>Heatmap</b><br><span style="font-size:0.8rem; color:#888">Free Throw</span>
+                </div>
+                <div class="menu-card" onclick="app.loadMode('cricket')">
+                    <span style="font-size:2rem">🦗</span><br><b>Cricket</b><br><span style="font-size:0.8rem; color:#888">Count-Up</span>
+                </div>
+            </div>
+
+            <div class="stats-container">
+                <h3 style="margin:0; border-bottom:1px solid #444; padding-bottom:10px;">Player Profile</h3>
+                <div class="stat-row">
+                    <span>Matches Played (X01)</span>
+                    <span class="stat-val" id="stat-matches">0</span>
+                </div>
+                <div class="stat-row">
+                    <span>Win Rate</span>
+                    <span class="stat-val" id="stat-wr">0%</span>
+                </div>
+                <div class="stat-row">
+                    <span>3-Dart Average</span>
+                    <span class="stat-val" id="stat-avg">0.0</span>
+                </div>
+                <div class="stat-row" style="border:none">
+                    <span>Career Level</span>
+                    <span class="stat-val" id="stat-level">1</span>
+                </div>
+                <button class="btn" style="padding:10px; font-size:0.8rem; margin-top:10px; background:#444;" onclick="Stats.clear()">Reset Stats</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="screen-game" class="screen">
+        <header>
+            <h1 id="game-title">Game</h1>
+            <button class="btn" style="width: auto; padding: 5px 15px; font-size: 0.8rem;" onclick="app.goHome()">Exit</button>
+        </header>
+
+        <div class="main-area">
+            
+            <div id="drill-box" class="drill-instruction" style="display:none"></div>
+
+            <div class="hud-panel">
+                <div class="hud-score-box">
+                    <div class="hud-label" id="hud-lbl-1">YOU</div>
+                    <div class="hud-score" id="hud-val-1">501</div>
+                    <div class="hud-label" id="hud-sub-1"></div>
+                </div>
+                <div class="hud-score-box">
+                    <div class="hud-label" id="hud-lbl-2">BOT</div>
+                    <div class="hud-score bot-score" id="hud-val-2">501</div>
+                    <div class="hud-label" id="hud-sub-2"></div>
+                </div>
+            </div>
+
+            <div id="board-container"></div>
+            <div id="status-msg" style="height:20px; color:#aaa; font-style:italic;">Target: Open</div>
+
+            <div class="controls">
+                <button class="btn" onclick="app.undo()">Undo</button>
+                <button class="btn btn-miss" onclick="app.handleHit(0, 'MISS', null)">Miss</button>
+                <button class="btn btn-primary" id="btn-next" onclick="app.handleAction()">Next Round</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+
+// --- STATS SYSTEM (LocalStorage) ---
+const Stats = {
+    data: {
+        matches: 0,
+        wins: 0,
+        totalScore: 0,
+        totalDarts: 0,
+        careerLevel: 0
+    },
+    load: function() {
+        const s = localStorage.getItem('darts_stats_v3');
+        if(s) this.data = JSON.parse(s);
+        this.updateUI();
+    },
+    save: function() {
+        localStorage.setItem('darts_stats_v3', JSON.stringify(this.data));
+        this.updateUI();
+    },
+    recordMatch: function(win, scoreTotal, dartsThrown) {
+        this.data.matches++;
+        if(win) this.data.wins++;
+        this.data.totalScore += scoreTotal;
+        this.data.totalDarts += dartsThrown;
+        this.save();
+    },
+    updateLevel: function(lvl) {
+        if(lvl > this.data.careerLevel) {
+            this.data.careerLevel = lvl;
+            this.save();
+        }
+    },
+    clear: function() {
+        if(confirm("Reset all history?")) {
+            localStorage.removeItem('darts_stats_v3');
+            location.reload();
+        }
+    },
+    updateUI: function() {
+        document.getElementById('stat-matches').innerText = this.data.matches;
+        document.getElementById('stat-level').innerText = "Lvl " + (this.data.careerLevel + 1);
+        
+        let wr = 0;
+        if(this.data.matches > 0) wr = Math.round((this.data.wins / this.data.matches) * 100);
+        document.getElementById('stat-wr').innerText = wr + "%";
+
+        let avg = 0;
+        if(this.data.totalDarts > 0) avg = ((this.data.totalScore / this.data.totalDarts) * 3).toFixed(1);
+        document.getElementById('stat-avg').innerText = avg;
+    }
+};
+
+// --- AUDIO ---
+const Speaker = {
+    speak: function(text) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        window.speechSynthesis.speak(u);
+    }
+};
+
+// --- DRILLS DATA ---
+const DRILLS = [
+    { title: "Calibration", desc: "Hit any Single number 10 times.", target: 'any', count: 10 },
+    { title: "Grouping 20", desc: "Hit the 20 wedge (S/D/T) 5 times.", target: 20, count: 5 },
+    { title: "Round the Clock 1-5", desc: "Hit 1, 2, 3, 4, 5 in order.", sequence: [1,2,3,4,5] },
+    { title: "Bullseye Hunter", desc: "Hit the Bull (Green or Red) 3 times.", target: 25, count: 3 },
+    { title: "Heavy Scoring", desc: "Score 100+ points in one turn (3 darts).", type: 'score_burst', goal: 100 }
+];
+
+// --- SVG BOARD ---
+const BoardRenderer = {
+    render: function(cb) {
+        const c = document.getElementById('board-container');
+        c.innerHTML = '';
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("viewBox", "0 0 450 450");
+        svg.id = "dartboard-svg";
+        
+        const sectors = [20,1,18,4,13,6,10,15,2,17,3,19,7,16,8,11,14,9,12,5];
+        const C = 225;
+
+        // Draw Helper
+        function ring(r1, r2, type, c1, c2) {
+            const angle = 360/20;
+            sectors.forEach((s, i) => {
+                const a1 = (i*angle - angle/2) * Math.PI/180 - Math.PI/2;
+                const a2 = (i*angle + angle/2) * Math.PI/180 - Math.PI/2;
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                const d = `M${C+r1*Math.cos(a1)},${C+r1*Math.sin(a1)} L${C+r2*Math.cos(a1)},${C+r2*Math.sin(a1)} A${r2},${r2} 0 0,1 ${C+r2*Math.cos(a2)},${C+r2*Math.sin(a2)} L${C+r1*Math.cos(a2)},${C+r1*Math.sin(a2)} A${r1},${r1} 0 0,0 ${C+r1*Math.cos(a1)},${C+r1*Math.sin(a1)}Z`;
+                path.setAttribute("d", d);
+                path.setAttribute("fill", i%2===0 ? c1 : c2);
+                path.onclick = (e) => cb(s, type, e);
+                svg.appendChild(path);
+            });
+        }
+        
+        ring(162, 170, 'D', '#e53935', '#43a047');
+        ring(107, 162, 'S', '#121212', '#eeeeee');
+        ring(99, 107, 'T', '#e53935', '#43a047');
+        ring(16, 99, 'S', '#121212', '#eeeeee');
+        
+        // Bulls
+        const b1 = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        b1.setAttribute("cx", C); b1.setAttribute("cy", C); b1.setAttribute("r", 16); b1.setAttribute("fill", "#43a047");
+        b1.onclick = (e) => cb(25, 'S', e);
+        svg.appendChild(b1);
+        
+        const b2 = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        b2.setAttribute("cx", C); b2.setAttribute("cy", C); b2.setAttribute("r", 6); b2.setAttribute("fill", "#e53935");
+        b2.onclick = (e) => cb(50, 'D', e);
+        svg.appendChild(b2);
+
+        // Labels
+        sectors.forEach((s,i) => {
+             const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+             const ang = (i * 360/20 - 90) * Math.PI/180;
+             txt.setAttribute("x", C + 195 * Math.cos(ang));
+             txt.setAttribute("y", C + 195 * Math.sin(ang));
+             txt.setAttribute("text-anchor", "middle");
+             txt.setAttribute("dominant-baseline", "middle");
+             txt.setAttribute("fill", "white");
+             txt.textContent = s;
+             txt.style.pointerEvents = "none";
+             svg.appendChild(txt);
+        });
+
+        c.appendChild(svg);
+    }
+};
+
+// --- APP LOGIC ---
+const app = {
+    mode: null,
+    state: {},
+    
+    goHome: function() {
+        document.getElementById('screen-game').classList.remove('active');
+        document.getElementById('screen-menu').classList.add('active');
+        Stats.load(); // Refresh stats on menu
+    },
+
+    loadMode: function(m) {
+        this.mode = m;
+        this.state = { 
+            score: 501, 
+            botScore: 501, 
+            dartsInTurn: 0, 
+            turnScore: 0,
+            botHistory: [],
+            history: [],
+            drillIdx: Stats.data.careerLevel,
+            drillProgress: 0
+        };
+
+        document.getElementById('screen-menu').classList.remove('active');
+        document.getElementById('screen-game').classList.add('active');
+        document.getElementById('drill-box').style.display = 'none';
+        
+        BoardRenderer.render(this.handleHit.bind(this));
+
+        // Setup UI based on mode
+        if(m === 'x01') {
+            document.getElementById('game-title').innerText = "Bot Match";
+            document.getElementById('hud-lbl-2').innerText = "BOT (AVG 45)";
+            this.updateX01UI();
+            document.getElementById('btn-next').innerText = "Confirm Turn";
+        } else if (m === 'career') {
+            document.getElementById('game-title').innerText = "Career Drill";
+            this.loadDrill();
+            document.getElementById('btn-next').innerText = "Reset Drill";
+        } else {
+            document.getElementById('game-title').innerText = "Practice";
+            document.getElementById('hud-val-1').innerText = "0";
+            document.getElementById('hud-lbl-2').innerText = "";
+            document.getElementById('hud-val-2').innerText = "";
+            document.getElementById('btn-next').innerText = "Clear Board";
+        }
+    },
+
+    loadDrill: function() {
+        if(this.state.drillIdx >= DRILLS.length) {
+            alert("All drills complete! You are a master.");
+            this.goHome();
+            return;
+        }
+        const d = DRILLS[this.state.drillIdx];
+        document.getElementById('drill-box').style.display = 'block';
+        document.getElementById('drill-box').innerHTML = `<b>Lvl ${this.state.drillIdx+1}: ${d.title}</b><br>${d.desc}`;
+        
+        document.getElementById('hud-lbl-1').innerText = "PROGRESS";
+        document.getElementById('hud-lbl-2').innerText = "GOAL";
+        
+        this.updateDrillUI();
+    },
+
+    handleHit: function(score, type, e) {
+        // Visuals
+        if(this.mode !== 'x01' && e) {
+            const svg = document.getElementById('dartboard-svg');
+            const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+            const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            dot.setAttribute("cx", svgP.x); dot.setAttribute("cy", svgP.y); dot.setAttribute("r", 4);
+            dot.setAttribute("fill", "#ffd700");
+            svg.appendChild(dot);
+        }
+
+        let pts = score;
+        if(type==='D') pts *=2;
+        if(type==='T') pts *=3;
+        
+        document.getElementById('status-msg').innerText = `Last: ${type}${score} (${pts})`;
+
+        if(this.mode === 'x01') this.logicX01(pts, type);
+        if(this.mode === 'career') this.logicCareer(pts, score, type);
+        if(this.mode === 'practice') {
+            this.state.turnScore += pts;
+            document.getElementById('hud-val-1').innerText = this.state.turnScore;
+        }
+    },
+
+    logicX01: function(pts, type) {
+        if(this.state.dartsInTurn >= 3) return; // Wait for next turn
+        
+        this.state.dartsInTurn++;
+        const left = this.state.score - pts;
+
+        if(left === 0 && type === 'D') {
+            this.state.score = 0;
+            Stats.recordMatch(true, 501, 15); // Rough avg darts
+            alert("YOU WIN!");
+            this.goHome();
+            return;
+        }
+
+        if(left <= 1 && left !== 0) {
+            Speaker.speak("Bust!");
+            this.state.turnScore = 0; // Invalid
+            this.state.dartsInTurn = 3; // End turn immediately
+        } else {
+            this.state.score = left;
+            this.state.turnScore += pts;
+            Speaker.speak(`${pts}`);
+        }
+        
+        this.updateX01UI();
+    },
+
+    handleAction: function() {
+        if(this.mode === 'x01') {
+            // Player turn over, Bot turn
+            if(this.state.dartsInTurn === 0) return; // Don't skip if haven't thrown
+            
+            this.state.dartsInTurn = 0;
+            this.state.turnScore = 0;
+            document.getElementById('status-msg').innerText = "Bot is throwing...";
+            
+            // SIMULATE BOT (Avg 45 points per turn + random variance)
+            setTimeout(() => {
+                const botPts = Math.floor(Math.random() * 40) + 30; // 30-70 pts
+                const botLeft = this.state.botScore - botPts;
+                
+                if(botLeft <= 1) {
+                    // Bot Checkout Logic Check
+                    if(Math.random() > 0.7) { // 30% chance to miss checkout
+                        this.state.botScore = 0;
+                        Stats.recordMatch(false, 501 - this.state.score, 20);
+                        alert("Bot Wins. Unlucky.");
+                        this.goHome();
+                        return;
+                    }
+                    this.state.botScore = 20; // Bot missed double, set to safe
+                } else {
+                    this.state.botScore = botLeft;
+                }
+                
+                Speaker.speak(`Bot scored ${botPts}`);
+                this.updateX01UI();
+                document.getElementById('status-msg').innerText = "Your Turn";
+            }, 1000);
+        }
+        else if (this.mode === 'practice') {
+             BoardRenderer.render(this.handleHit.bind(this));
+             this.state.turnScore = 0;
+             document.getElementById('hud-val-1').innerText = "0";
+        }
+        else if (this.mode === 'career') {
+            // Reset drill
+            this.state.drillProgress = 0;
+            this.state.turnScore = 0;
+            this.state.dartsInTurn = 0;
+            this.updateDrillUI();
+            BoardRenderer.render(this.handleHit.bind(this));
+        }
+    },
+
+    updateX01UI: function() {
+        document.getElementById('hud-val-1').innerText = this.state.score;
+        document.getElementById('hud-val-2').innerText = this.state.botScore;
+        document.getElementById('hud-sub-1').innerText = `${3 - this.state.dartsInTurn} Darts Left`;
+    },
+
+    logicCareer: function(pts, raw, type) {
+        const d = DRILLS[this.state.drillIdx];
+        let success = false;
+
+        // Sequence Drill
+        if(d.sequence) {
+            const target = d.sequence[this.state.drillProgress];
+            if(raw === target) {
+                this.state.drillProgress++;
+                Speaker.speak(`Hit ${raw}`);
+            }
+            if(this.state.drillProgress >= d.sequence.length) success = true;
+        } 
+        // Simple Target Count
+        else if (d.target) {
+            if((d.target === 'any' && type === 'S') || raw === d.target || (d.target===25 && raw>=25)) {
+                this.state.drillProgress++;
+                Speaker.speak("Yes");
+            }
+            if(this.state.drillProgress >= d.count) success = true;
+        }
+        // Score Burst
+        else if (d.type === 'score_burst') {
+            this.state.dartsInTurn++;
+            this.state.turnScore += pts;
+            if(this.state.dartsInTurn === 3) {
+                if(this.state.turnScore >= d.goal) success = true;
+                else {
+                    Speaker.speak(`${this.state.turnScore}. Too low.`);
+                    this.state.turnScore = 0;
+                    this.state.dartsInTurn = 0;
+                    // Auto-reset visuals
+                    BoardRenderer.render(this.handleHit.bind(this));
+                }
+            }
+        }
+
+        this.updateDrillUI();
+
+        if(success) {
+            Speaker.speak("Drill Passed!");
+            alert("Level Complete!");
+            this.state.drillIdx++;
+            Stats.updateLevel(this.state.drillIdx);
+            this.state.drillProgress = 0;
+            this.state.turnScore = 0;
+            this.state.dartsInTurn = 0;
+            this.loadDrill();
+        }
+    },
+
+    updateDrillUI: function() {
+        const d = DRILLS[this.state.drillIdx];
+        if(d.type === 'score_burst') {
+             document.getElementById('hud-val-1').innerText = this.state.turnScore;
+             document.getElementById('hud-val-2').innerText = d.goal;
+             document.getElementById('hud-sub-1').innerText = "Current Turn";
+        } else if (d.sequence) {
+             const nextT = d.sequence[this.state.drillProgress] || "Finish";
+             document.getElementById('hud-val-1').innerText = nextT;
+             document.getElementById('hud-val-2').innerText = "Target";
+             document.getElementById('hud-sub-1').innerText = `Step ${this.state.drillProgress + 1}`;
+        } else {
+             document.getElementById('hud-val-1').innerText = this.state.drillProgress;
+             document.getElementById('hud-val-2').innerText = d.count;
+             document.getElementById('hud-sub-1').innerText = "Hits";
+        }
+    },
+
+    undo: function() { alert("Undo disabled in this version."); }
+};
+
+// Init
+Stats.load();
+</script>
+</body>
+</html>
