@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DartsOS v10: Master</title>
+    <title>DartsOS v11: Cricket & SFX</title>
     <style>
         :root {
             --bg: #121212; --panel: #1e1e1e; --primary: #00e676; --secondary: #2979ff; --danger: #ff1744;
@@ -24,10 +24,10 @@
         .menu-card:active { transform: scale(0.98); border-color: var(--primary); }
         .chart-container { width: 100%; max-width: 600px; height: 150px; background: #222; border-radius: 12px; margin-top: 10px; position: relative; border: 1px solid #333; }
         .hud-panel { width: 100%; max-width: 600px; background: var(--panel); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .hud-score-box { text-align: center; flex: 1; transition: opacity 0.3s; }
+        .hud-score-box { text-align: center; flex: 1; transition: opacity 0.3s; cursor: pointer; }
         .hud-score-box.inactive { opacity: 0.4; }
         .hud-score { font-size: 2.5rem; font-weight: bold; color: var(--primary); }
-        .hud-label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; }
+        .hud-label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; font-weight: bold; }
         .bot-score { color: var(--danger); }
         .leg-score { background: #333; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 1.2rem; margin: 0 10px; }
         .checkout-hint { background: #333; color: var(--highlight); padding: 5px 10px; border-radius: 4px; font-size: 0.9rem; font-weight: bold; margin-top: 5px; display: inline-block; min-height: 20px; border: 1px solid #444; }
@@ -42,14 +42,21 @@
         .btn-primary { background: var(--primary); color: black; }
         .btn-miss { background: #424242; color: #ff5252; border: 1px solid #ff5252; flex: 0.4; }
         .rank-badge { background: var(--highlight); color: black; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; position: absolute; top: 10px; right: 10px; }
-        polyline { fill: none; stroke: var(--primary); stroke-width: 2; vector-effect: non-scaling-stroke; }
+        
+        /* CRICKET UI */
+        #cricket-board { display: none; width: 100%; max-width: 450px; margin-bottom: 10px; background: #222; border-radius: 8px; overflow: hidden; }
+        .crick-row { display: flex; border-bottom: 1px solid #333; height: 35px; align-items: center; }
+        .crick-num { flex: 1; text-align: center; font-weight: bold; color: #aaa; background: #2a2a2a; height: 100%; display: flex; align-items: center; justify-content: center; border-left: 1px solid #333; border-right: 1px solid #333; }
+        .crick-mk { flex: 2; text-align: center; color: white; font-weight: bold; font-family: monospace; font-size: 1.2rem; }
+        .crick-mk.closed { color: #555; }
+        .crick-header { background: #333; color: var(--highlight); font-size: 0.8rem; height: 25px; }
     </style>
 </head>
 <body>
 
 <div id="screen-menu" class="screen active">
     <header>
-        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v10</span></h1>
+        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v11</span></h1>
         <div style="display:flex; gap:10px;">
             <div id="settings-btn" class="icon-btn" onclick="Stats.exportData()">💾</div>
         </div>
@@ -63,10 +70,10 @@
         <h2 style="margin-top: 20px;">Game Modes</h2>
         <div class="menu-grid">
             <div class="menu-card" onclick="app.loadMode('league')">
-                <span class="rank-badge" id="league-rank">ROOKIE</span><span style="font-size:2rem">🏆</span><br><b>Bot League</b><br><span style="font-size:0.8rem; color:#888">Single Player</span>
+                <span class="rank-badge" id="league-rank">ROOKIE</span><span style="font-size:2rem">🏆</span><br><b>Bot League</b><br><span style="font-size:0.8rem; color:#888">X01 Match Play</span>
             </div>
-            <div class="menu-card" onclick="app.loadMode('pvp')">
-                <span style="font-size:2rem">👥</span><br><b>Vs Player</b><br><span style="font-size:0.8rem; color:#888">Pass & Play (PVP)</span>
+            <div class="menu-card" onclick="app.loadMode('cricket')">
+                <span style="font-size:2rem">🦗</span><br><b>Cricket</b><br><span style="font-size:0.8rem; color:#888">Tactical Attack</span>
             </div>
             <div class="menu-card" onclick="app.loadMode('jdc')">
                 <span style="font-size:2rem">🥋</span><br><b>JDC Academy</b><br><span style="font-size:0.8rem; color:#888">Official Routine</span>
@@ -76,6 +83,9 @@
             </div>
             <div class="menu-card" onclick="app.loadMode('practice')">
                 <span style="font-size:2rem">🔥</span><br><b>Heatmap</b><br><span style="font-size:0.8rem; color:#888">Analysis</span>
+            </div>
+            <div class="menu-card" onclick="app.loadMode('pvp')">
+                <span style="font-size:2rem">👥</span><br><b>Vs Player</b><br><span style="font-size:0.8rem; color:#888">Pass & Play</span>
             </div>
         </div>
         <button class="btn" style="background:#222; margin-top:10px; font-size:0.8rem" onclick="Stats.clear()">Reset Career</button>
@@ -93,7 +103,7 @@
     </header>
     <div class="main-area">
         <div class="hud-panel">
-            <div class="hud-score-box" id="p1-box">
+            <div class="hud-score-box" id="p1-box" onclick="app.renameUser()">
                 <div class="hud-label" id="hud-lbl-1">YOU</div>
                 <div class="hud-score" id="hud-val-1">501</div>
                 <div class="checkout-hint" id="checkout-display"></div>
@@ -105,15 +115,21 @@
                 <div class="hud-label" id="hud-sub-2"></div>
             </div>
         </div>
+
+        <div id="cricket-board"></div>
+
         <div id="board-container"></div>
+        
         <div id="numpad-container">
             <button class="pad-btn" onclick="app.numpadAdd(1)">1</button><button class="pad-btn" onclick="app.numpadAdd(2)">2</button><button class="pad-btn" onclick="app.numpadAdd(3)">3</button>
             <button class="pad-btn" onclick="app.numpadAdd(4)">4</button><button class="pad-btn" onclick="app.numpadAdd(5)">5</button><button class="pad-btn" onclick="app.numpadAdd(6)">6</button>
             <button class="pad-btn" onclick="app.numpadAdd(7)">7</button><button class="pad-btn" onclick="app.numpadAdd(8)">8</button><button class="pad-btn" onclick="app.numpadAdd(9)">9</button>
             <button class="pad-btn" style="color:#ff5252" onclick="app.numpadClear()">CLR</button><button class="pad-btn" onclick="app.numpadAdd(0)">0</button>
-            <button class="pad-enter" onclick="app.numpadSubmit()">ENTER SCORE</button>
+            <button class="pad-enter" onclick="app.numpadSubmit()">ENTER</button>
         </div>
+
         <div id="status-msg" style="height:20px; color:#aaa; font-style:italic;">Target: Open</div>
+
         <div class="controls" id="touch-controls">
             <button class="btn" onclick="app.undo()">Undo</button>
             <button class="btn btn-miss" onclick="app.handleHit(0, 'MISS', null)">Miss</button>
@@ -132,50 +148,29 @@ const BOTS = [
     { name: "The Iceman", avg: 95, checkout: 0.9 }
 ];
 
-// --- STRATEGIST (SMART CHECKOUTS) ---
-const Strategist = {
-    // Generates a checkout string for any score 170 or less
-    getCheckout: function(score) {
-        if (score > 170 || score < 2) return "";
-        
-        // 1. Check if it's a direct double (2-40 even, 50)
-        if (score === 50) return "Bullseye";
-        if (score <= 40 && score % 2 === 0) return "D" + (score / 2);
-
-        // 2. Check 2-dart finishes (Single/Treble + Double)
-        for (let first = 60; first >= 1; first--) {
-            // Iterate high to low to find best setup (T20, T19, etc)
-            // Valid first darts: 1-20, 25, 50, and their Triples/Doubles
-            // Simplified: Just check subtracting common big hits
+const SFX = {
+    playThud: function() {
+        try {
+            const C = window.AudioContext || window.webkitAudioContext;
+            if(!C) return;
+            const ctx = new C();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
             
-            // Try Trebles (60, 57, 54...)
-            let rem = score - first;
-            if (rem >= 2 && rem <= 40 && rem % 2 === 0 && first % 3 === 0 && first <= 60) {
-                return "T" + (first/3) + " D" + (rem/2);
-            }
-            // Try Singles (for small finishes)
-            if (rem >= 2 && rem <= 40 && rem % 2 === 0 && first <= 20) {
-                return first + " D" + (rem/2);
-            }
-            // Try Bull (50) or Outer (25)
-            if (score - 50 >= 2 && (score - 50) % 2 === 0 && (score - 50) <= 40) return "Bull D" + ((score-50)/2);
-            if (score - 25 >= 2 && (score - 25) % 2 === 0 && (score - 25) <= 40) return "25 D" + ((score-25)/2);
-        }
-
-        // 3. Known 3-dart routes (Static List for common ones)
-        const routes = {
-            170: "T20 T20 Bull", 167: "T20 T19 Bull", 164: "T20 T18 Bull", 161: "T20 T17 Bull",
-            160: "T20 T20 D20", 158: "T20 T20 D19", 156: "T20 T20 D18", 150: "T20 T18 D18",
-            140: "T20 T16 D16", 136: "T20 T20 D8", 132: "T20 T20 D6", 130: "T20 T18 D8",
-            126: "T19 T19 D6", 121: "T20 T11 D14", 120: "T20 20 D20", 116: "T20 16 D20",
-            110: "T20 10 D20", 100: "T20 D20", 96: "T20 D18", 90: "T18 D18",
-            82: "Bull D16", 81: "T19 D12", 80: "T20 D10", 76: "T20 D8", 72: "T16 D12", 70: "T18 D8"
-        };
-        return routes[score] ? routes[score] : "No easy shot";
+            osc.frequency.setValueAtTime(150, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.1);
+            
+            gain.gain.setValueAtTime(0.5, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+            
+            osc.start();
+            osc.stop(ctx.currentTime + 0.1);
+        } catch(e) {}
     }
 };
 
-// --- AUDIO ---
 const Speaker = {
     speak: function(e, t) {
         if(!window.speechSynthesis) return;
@@ -191,86 +186,109 @@ const Speaker = {
     }
 };
 
+const Strategist = {
+    getCheckout: function(score) {
+        if (score > 170 || score < 2) return "";
+        if (score === 50) return "Bullseye";
+        if (score <= 40 && score % 2 === 0) return "D" + (score / 2);
+        for (let first = 60; first >= 1; first--) {
+            let rem = score - first;
+            if (rem >= 2 && rem <= 40 && rem % 2 === 0 && first % 3 === 0 && first <= 60) return "T" + (first/3) + " D" + (rem/2);
+            if (rem >= 2 && rem <= 40 && rem % 2 === 0 && first <= 20) return first + " D" + (rem/2);
+            if (score - 50 >= 2 && (score - 50) % 2 === 0 && (score - 50) <= 40) return "Bull D" + ((score-50)/2);
+            if (score - 25 >= 2 && (score - 25) % 2 === 0 && (score - 25) <= 40) return "25 D" + ((score-25)/2);
+        }
+        return "No easy shot";
+    }
+};
+
 // --- VOICE ---
 const Voice = {
-    recognition: null,
-    isListening: !1,
+    recognition: null, isListening: false,
     init: function() {
-        if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) return;
-        const e = window.SpeechRecognition || window.webkitSpeechRecognition;
-        this.recognition = new e, this.recognition.continuous = !0, this.recognition.interimResults = !1, this.recognition.lang = "en-US", this.recognition.onresult = e => this.processCommand(e.results[e.results.length - 1][0].transcript), this.recognition.onend = () => {
-            this.isListening && this.recognition.start()
-        }
+        if (!("webkitSpeechRecognition" in window)) return;
+        const e = window.webkitSpeechRecognition;
+        this.recognition = new e; this.recognition.continuous = !0; this.recognition.lang = "en-US";
+        this.recognition.onresult = e => this.processCommand(e.results[e.results.length - 1][0].transcript);
+        this.recognition.onend = () => { if(this.isListening) this.recognition.start(); };
     },
     toggle: function() {
-        this.recognition || this.init(), this.recognition && (this.isListening ? (this.recognition.stop(), this.isListening = !1) : (this.recognition.start(), this.isListening = !0));
+        if (!this.recognition) this.init();
+        if (!this.recognition) return alert("Voice not supported on this device");
+        this.isListening ? (this.recognition.stop(), this.isListening = !1) : (this.recognition.start(), this.isListening = !0);
         const e = this.isListening ? "icon-btn listening" : "icon-btn";
-        document.getElementById("mic-toggle-menu").className = e, document.getElementById("mic-toggle-game").className = e
+        document.getElementById("mic-toggle-menu").className = e, document.getElementById("mic-toggle-game").className = e;
     },
     processCommand: function(e) {
         const t = e.toLowerCase().trim();
-        if (t.includes("next")) return void app.handleAction();
-        if (t.includes("undo")) return void app.undo();
-        if (t.includes("miss")) return void app.handleHit(0, "MISS");
+        if (t.includes("next")) return app.handleAction();
         let o = "S";
-        t.includes("double") && (o = "D"), (t.includes("triple") || t.includes("treble")) && (o = "T");
+        if(t.includes("double")) o = "D"; if(t.includes("triple")) o = "T";
         let n = 0;
-        if (t.includes("bullseye") || t.includes("50") ? n = 50 : t.includes("25") ? n = 25 : t.includes("bull") && (n = 50), 0 === n) {
-            const e = t.match(/(\d+)/);
-            if (e) n = parseInt(e[0]);
-            else {
-                const e = {one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, twenty: 20};
-                for (let o in e) t.includes(o) && (n = e[o])
-            }
+        if (t.includes("bull")) n = 50; else if (t.includes("25")) n = 25;
+        else { const m = t.match(/(\d+)/); if (m) n = parseInt(m[0]); }
+        if (n > 0 && n <= 50) {
+            if (n === 50) { n = 25; o = "D"; }
+            app.handleHit(n, o);
         }
-        n > 0 && n <= 50 && (25 === n && "T" === o || (50 === n && (n = 25, o = "D"), app.handleHit(n, o)))
     }
 };
 
 // --- STATS ---
 const Stats = {
-    data: { matches: [], leagueRank: 0, drillLevel: 0, heatmap: [] },
+    data: { matches: [], leagueRank: 0, drillLevel: 0, heatmap: [], userName: "YOU" },
     load: function() {
-        const e = localStorage.getItem("darts_v10");
-        e && (this.data = JSON.parse(e)), this.renderChart(), this.updateBadges()
+        const e = localStorage.getItem("darts_v11");
+        if (e) this.data = JSON.parse(e);
+        this.renderChart(); this.updateBadges();
     },
-    save: function() { localStorage.setItem("darts_v10", JSON.stringify(this.data)) },
+    save: function() { localStorage.setItem("darts_v11", JSON.stringify(this.data)) },
+    setName: function(n) { this.data.userName = n; this.save(); },
     addMatch: function(e, t) {
-        this.data.matches.push({ avg: parseFloat(e), result: t, type: "x01" }), this.data.matches.length > 20 && this.data.matches.shift(), this.save()
+        this.data.matches.push({ avg: parseFloat(e), result: t, type: "x01" });
+        if (this.data.matches.length > 20) this.data.matches.shift();
+        this.save();
     },
-    addHeatmapPoint: function(e, t) {
-        this.data.heatmap.push({ x: e, y: t }), this.data.heatmap.length > 2e3 && this.data.heatmap.shift(), this.save()
+    addHeatmapPoint: function(x, y) {
+        this.data.heatmap.push({x, y});
+        if (this.data.heatmap.length > 2000) this.data.heatmap.shift();
+        this.save();
     },
-    updateLeague: function(e) { e === this.data.leagueRank && (this.data.leagueRank++, this.save()) },
+    updateLeague: function(e) { if(e === this.data.leagueRank){ this.data.leagueRank++; this.save(); } },
     exportData: function() {
-        const e = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data)), t = document.createElement("a");
-        t.setAttribute("href", e), t.setAttribute("download", "dartsos_backup.json"), document.body.appendChild(t), t.click(), t.remove()
+        const e = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data));
+        const t = document.createElement("a");
+        t.href = e; t.download = "dartsos_backup.json"; document.body.appendChild(t); t.click(); t.remove();
     },
-    clear: function() { confirm("Wipe entire career history?") && (localStorage.removeItem("darts_v10"), location.reload()) },
+    clear: function() { if(confirm("Reset all data?")) { localStorage.removeItem("darts_v11"); location.reload(); } },
     renderChart: function() {
-        const e = document.getElementById("chart-area"), t = this.data.matches.filter(e => "x01" === e.type);
-        if (t.length < 2) return e.innerHTML = "<div style='padding:60px; text-align:center; color:#555;'>Play Tournament to see graph</div>", void(document.getElementById("current-avg-display").innerText = "Avg: --");
-        const o = t.map(e => e.avg), n = Math.max(...o) + 5, a = Math.max(0, Math.min(...o) - 5), r = 600, i = 150;
-        let d = "";
-        o.forEach((e, t) => { d += `${t/(o.length-1)*r},${i-(e-a)/(n-a)*i} ` });
-        const c = o.slice(-3), s = (c.reduce((e, t) => e + t, 0) / c.length).toFixed(1);
-        document.getElementById("current-avg-display").innerText = "Avg: " + s, e.innerHTML = `<svg width="100%" height="100%" viewBox="0 0 ${r} ${i}" preserveAspectRatio="none"><line x1="0" y1="${i/2}" x2="${r}" y2="${i/2}" stroke="#333" stroke-dasharray="4" /><polyline points="${d}" /></svg>`
+        const e = document.getElementById("chart-area");
+        const t = this.data.matches.filter(x => x.type === "x01");
+        if (t.length < 2) return e.innerHTML = "<div style='padding:60px;text-align:center;color:#555'>Play matches to see stats</div>";
+        const avgs = t.map(x => x.avg);
+        const max = Math.max(...avgs) + 5; const min = Math.max(0, Math.min(...avgs) - 5);
+        const w = 600, h = 150;
+        let pts = "";
+        avgs.forEach((val, i) => { pts += `${i/(avgs.length-1)*w},${h-(val-min)/(max-min)*h} `; });
+        const last3 = avgs.slice(-3);
+        const curr = (last3.reduce((a,b)=>a+b,0)/last3.length).toFixed(1);
+        document.getElementById("current-avg-display").innerText = "Avg: " + curr;
+        e.innerHTML = `<svg width="100%" height="100%" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline points="${pts}" stroke="#00e676" fill="none" stroke-width="2"/></svg>`;
     },
     updateBadges: function() {
         const e = ["ROOKIE", "AMATEUR", "SEMI-PRO", "PRO", "ELITE"];
-        document.getElementById("league-rank").innerText = e[Math.min(4, this.data.leagueRank)]
+        document.getElementById("league-rank").innerText = e[Math.min(4, this.data.leagueRank)];
     }
 };
 
 // --- RENDERER ---
 const BoardRenderer = {
-    render: function(e, t = !1) {
-        const o = document.getElementById("board-container");
-        o.innerHTML = "";
-        // INCREASED VIEWBOX: 500x500 to fit labels
+    render: function(cb, showHeat) {
+        const c = document.getElementById("board-container");
+        c.innerHTML = "";
         const n = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        n.setAttribute("viewBox", "0 0 500 500"), n.id = "dartboard-svg";
-        const a = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5], r = 250; // New Center
+        n.setAttribute("viewBox", "0 0 500 500"); n.id = "dartboard-svg";
+        const a = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5], r = 250;
 
         function i(t, o, i, d, c) {
             const s = 360 / 20;
@@ -285,12 +303,11 @@ const BoardRenderer = {
         const d = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         d.setAttribute("cx", r), d.setAttribute("cy", r), d.setAttribute("r", 16), d.setAttribute("fill", "#43a047"), d.onclick = t => e(25, "S", t), n.appendChild(d);
         const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        c.setAttribute("cx", r), c.setAttribute("cy", r), c.setAttribute("r", 6), c.setAttribute("fill", "#e53935"), c.onclick = t => e(25, "D", t), n.appendChild(c), t && Stats.data.heatmap.forEach(e => {
+        c.setAttribute("cx", r), c.setAttribute("cy", r), c.setAttribute("r", 6), c.setAttribute("fill", "#e53935"), c.onclick = t => e(25, "D", t), n.appendChild(c), showHeat && Stats.data.heatmap.forEach(e => {
             const t = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             t.setAttribute("cx", e.x), t.setAttribute("cy", e.y), t.setAttribute("r", 2), t.setAttribute("fill", "rgba(255, 215, 0, 0.4)"), t.style.pointerEvents = "none", n.appendChild(t)
         }), a.forEach((e, t) => {
             const o = document.createElementNS("http://www.w3.org/2000/svg", "text"), a = (360 * t / 20 - 90) * Math.PI / 180;
-            // Radius 205 puts text clearly outside the board
             o.setAttribute("x", r + 205 * Math.cos(a)), o.setAttribute("y", r + 205 * Math.sin(a)), o.setAttribute("text-anchor", "middle"), o.setAttribute("dominant-baseline", "middle"), o.setAttribute("fill", "white"), o.setAttribute("font-size", "24"), o.setAttribute("font-weight", "bold"), o.textContent = e, o.style.pointerEvents = "none", n.appendChild(o)
         }), o.appendChild(n)
     }
@@ -298,131 +315,303 @@ const BoardRenderer = {
 
 // --- APP ---
 const app = {
-    mode: null,
-    state: {},
-    inputMode: "board",
-    numpadBuffer: "",
+    mode: null, state: {}, inputMode: "board", numpadBuffer: "",
     goHome: function() {
-        document.getElementById("screen-game").classList.remove("active"), document.getElementById("screen-menu").classList.add("active"), Stats.load()
+        document.getElementById("screen-game").classList.remove("active");
+        document.getElementById("screen-menu").classList.add("active");
+        Stats.load();
+    },
+    renameUser: function() {
+        const n = prompt("Enter your name:", Stats.data.userName);
+        if(n) { Stats.setName(n); document.getElementById("hud-lbl-1").innerText = n; }
     },
     toggleInput: function() {
-        this.inputMode = "board" === this.inputMode ? "numpad" : "board";
-        const e = document.getElementById("board-container"), t = document.getElementById("numpad-container"), o = document.getElementById("touch-controls"), n = document.getElementById("input-toggle");
-        "numpad" === this.inputMode ? (e.style.display = "none", t.style.display = "grid", o.style.display = "none", n.innerText = "⌨️", n.classList.add("active")) : (e.style.display = "block", t.style.display = "none", o.style.display = "flex", n.innerText = "🎯", n.classList.remove("active"))
+        this.inputMode = this.inputMode === "board" ? "numpad" : "board";
+        const b = document.getElementById("board-container"), n = document.getElementById("numpad-container");
+        const btn = document.getElementById("input-toggle");
+        if (this.inputMode === "numpad") {
+            b.style.display = "none"; n.style.display = "grid"; btn.innerText = "⌨️"; btn.classList.add("active");
+        } else {
+            b.style.display = "block"; n.style.display = "none"; btn.innerText = "🎯"; btn.classList.remove("active");
+        }
     },
-    numpadAdd: function(e) {
-        this.numpadBuffer += e, document.getElementById("status-msg").innerText = "Score: " + this.numpadBuffer
-    },
-    numpadClear: function() {
-        this.numpadBuffer = "", document.getElementById("status-msg").innerText = "Score: "
-    },
+    numpadAdd: function(e) { this.numpadBuffer += e; document.getElementById("status-msg").innerText = "Score: " + this.numpadBuffer; },
+    numpadClear: function() { this.numpadBuffer = ""; document.getElementById("status-msg").innerText = "Score: "; },
     numpadSubmit: function() {
         const e = parseInt(this.numpadBuffer);
-        return isNaN(e) || e > 180 ? (alert("Invalid Score"), void this.numpadClear()) : (this.state.dartsInTurn = 3, this.handleTurnScore(e), void this.numpadClear())
+        if (isNaN(e) || e > 180) { alert("Invalid"); this.numpadClear(); return; }
+        if (this.mode === "league" || this.mode === "pvp") { this.state.dartsInTurn = 3; this.logicX01(e, "S", true); }
+        this.numpadClear();
     },
     loadMode: function(e) {
-        this.mode = e, this.state = {
+        this.mode = e;
+        this.state = {
             score: 501, p2Score: 501, currentPlayer: 1, dartsInTurn: 0, turnScore: 0,
             matchScore: [0, 0], matchTotalScore: 0, matchTotalDarts: 0,
-            targetList: [], targetIndex: 0, jdcLevel: 0, jdcScore: 0
-        }, document.getElementById("screen-menu").classList.remove("active"), document.getElementById("screen-game").classList.add("active"), BoardRenderer.render(this.handleHit.bind(this), "practice" === e), document.getElementById("p2-box").style.visibility = "hidden", document.getElementById("match-score-display").style.visibility = "hidden", "league" === e ? this.setupLeague() : "pvp" === e ? this.setupPvP() : "bobs27" === e ? this.setupBobs27() : "jdc" === e ? this.setupJDC() : document.getElementById("game-title").innerText = "Analysis"
+            targetList: [], targetIndex: 0, jdcLevel: 0,
+            cricket: { 1: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, 2: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, s1:0, s2:0 }
+        };
+        document.getElementById("screen-menu").classList.remove("active");
+        document.getElementById("screen-game").classList.add("active");
+        
+        BoardRenderer.render(this.handleHit.bind(this), "practice" === e);
+        document.getElementById("p2-box").style.visibility = "hidden";
+        document.getElementById("match-score-display").style.visibility = "hidden";
+        document.getElementById("cricket-board").style.display = "none";
+        document.getElementById("hud-lbl-1").innerText = Stats.data.userName;
+        document.getElementById("checkout-display").innerText = "";
+
+        if (e === "league") this.setupLeague();
+        else if (e === "pvp") this.setupPvP();
+        else if (e === "bobs27") this.setupBobs27();
+        else if (e === "jdc") this.setupJDC();
+        else if (e === "cricket") this.setupCricket();
+        else document.getElementById("game-title").innerText = "Analysis";
     },
     setupLeague: function() {
-        const e = Math.min(4, Stats.data.leagueRank), t = BOTS[e];
-        this.state.botIdx = e, document.getElementById("game-title").innerText = `Vs ${t.name}`, document.getElementById("p2-box").style.visibility = "visible", document.getElementById("match-score-display").style.visibility = "visible", this.updateUI()
+        const i = Math.min(4, Stats.data.leagueRank);
+        this.state.botIdx = i;
+        document.getElementById("game-title").innerText = "Vs " + BOTS[i].name;
+        document.getElementById("p2-box").style.visibility = "visible";
+        document.getElementById("match-score-display").style.visibility = "visible";
+        this.updateUI();
+    },
+    setupCricket: function() {
+        document.getElementById("game-title").innerText = "Cricket (PvP)";
+        document.getElementById("hud-val-1").innerText = "0";
+        document.getElementById("hud-val-2").innerText = "0";
+        document.getElementById("p2-box").style.visibility = "visible";
+        document.getElementById("hud-lbl-2").innerText = "P2";
+        document.getElementById("cricket-board").style.display = "block";
+        this.renderCricketBoard();
+    },
+    renderCricketBoard: function() {
+        const t = document.getElementById("cricket-board");
+        t.innerHTML = `<div class="crick-row crick-header"><div class="crick-mk">${Stats.data.userName}</div><div class="crick-num">#</div><div class="crick-mk">P2</div></div>`;
+        [20,19,18,17,16,15,25].forEach(n => {
+            const m1 = this.getMark(this.state.cricket[1][n]);
+            const m2 = this.getMark(this.state.cricket[2][n]);
+            t.innerHTML += `<div class="crick-row"><div class="crick-mk">${m1}</div><div class="crick-num">${n===25?'B':n}</div><div class="crick-mk">${m2}</div></div>`;
+        });
+    },
+    getMark: function(c) {
+        if(c===0) return ""; if(c===1) return "/"; if(c===2) return "X"; return "⦻";
     },
     setupPvP: function() {
-        document.getElementById("game-title").innerText = "P1 vs P2", document.getElementById("hud-lbl-1").innerText = "P1", document.getElementById("hud-lbl-2").innerText = "P2", document.getElementById("p2-box").style.visibility = "visible", document.getElementById("match-score-display").style.visibility = "visible", document.getElementById("hud-val-2").innerText = "501", this.updateUI()
+        document.getElementById("game-title").innerText = "P1 vs P2";
+        document.getElementById("hud-lbl-2").innerText = "P2";
+        document.getElementById("p2-box").style.visibility = "visible";
+        document.getElementById("match-score-display").style.visibility = "visible";
+        document.getElementById("hud-val-2").innerText = "501";
+        this.updateUI();
     },
     setupBobs27: function() {
-        this.state.targetList = Array.from({length: 20}, ((e, t) => t + 1)), this.state.targetList.push(25), this.state.score = 27, document.getElementById("game-title").innerText = "Bob's 27", document.getElementById("hud-lbl-1").innerText = "SCORE", document.getElementById("hud-val-1").innerText = "27", document.getElementById("p2-box").style.visibility = "visible", document.getElementById("hud-lbl-2").innerText = "TARGET", document.getElementById("hud-val-2").innerText = "D1"
+        this.state.targetList = Array.from({length: 20}, (_, i) => i + 1); this.state.targetList.push(25);
+        this.state.score = 27;
+        document.getElementById("game-title").innerText = "Bob's 27";
+        document.getElementById("hud-lbl-1").innerText = "SCORE";
+        document.getElementById("hud-val-1").innerText = "27";
+        document.getElementById("p2-box").style.visibility = "visible";
+        document.getElementById("hud-lbl-2").innerText = "TARGET";
+        document.getElementById("hud-val-2").innerText = "D1";
     },
     setupJDC: function() {
-        document.getElementById("game-title").innerText = "JDC Academy", document.getElementById("hud-lbl-1").innerText = "SCORE", document.getElementById("hud-val-1").innerText = "0", document.getElementById("p2-box").style.visibility = "visible", document.getElementById("hud-lbl-2").innerText = "TASK", document.getElementById("hud-val-2").innerText = "Double 10", document.getElementById("checkout-display").innerText = "Dart 1/3"
+        document.getElementById("game-title").innerText = "JDC Academy";
+        document.getElementById("hud-lbl-1").innerText = "SCORE";
+        document.getElementById("hud-val-1").innerText = "0";
+        document.getElementById("p2-box").style.visibility = "visible";
+        document.getElementById("hud-lbl-2").innerText = "TASK";
+        document.getElementById("hud-val-2").innerText = "Double 10";
+        document.getElementById("checkout-display").innerText = "Dart 1/3";
     },
-    handleHit: function(e, t, o) {
-        if (o) {
-            const t = document.getElementById("dartboard-svg"), n = t.createSVGPoint();
-            n.x = o.clientX, n.y = o.clientY;
-            const a = n.matrixTransform(t.getScreenCTM().inverse());
-            Stats.addHeatmapPoint(a.x, a.y);
-            const r = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            r.setAttribute("cx", a.x), r.setAttribute("cy", a.y), r.setAttribute("r", 4), r.setAttribute("fill", "#ffd700"), t.appendChild(r)
+    handleHit: function(val, type, e) {
+        if (e) {
+            const svg = document.getElementById("dartboard-svg");
+            const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+            const t = pt.matrixTransform(svg.getScreenCTM().inverse());
+            Stats.addHeatmapPoint(t.x, t.y);
+            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            dot.setAttribute("cx", t.x); dot.setAttribute("cy", t.y); dot.setAttribute("r", 4);
+            dot.setAttribute("fill", "#ffd700"); svg.appendChild(dot);
         }
-        let n = e;
-        "D" === t && (n *= 2), "T" === t && (n *= 3), document.getElementById("status-msg").innerText = `Hit: ${t}${e}`, this.mode.includes("league") || "pvp" === this.mode ? this.logicX01(n, t) : "bobs27" === this.mode ? this.logicBobs(e, t) : "jdc" === this.mode && this.logicJDC(e, t)
+        
+        SFX.playThud();
+        
+        let pts = val;
+        if (type === "D") pts *= 2; if (type === "T") pts *= 3;
+        
+        document.getElementById("status-msg").innerText = `Hit: ${type}${val}`;
+        
+        if (this.mode === "cricket") this.logicCricket(val, type);
+        else if (this.mode.includes("league") || this.mode === "pvp") this.logicX01(pts, type);
+        else if (this.mode === "bobs27") this.logicBobs(val, type);
+        else if (this.mode === "jdc") this.logicJDC(val, type);
     },
-    handleTurnScore: function(e) {
-        "league" === this.mode || "pvp" === this.mode ? this.logicX01(e, "S", !0) : null
-    },
-    logicX01: function(e, t, o = !1) {
-        const n = 1 === this.state.currentPlayer ? this.state.score : this.state.p2Score;
-        if (!o && (this.state.dartsInTurn >= 3)) return;
-        o || this.state.dartsInTurn++;
-        const a = n - e, r = 0 === a && ("D" === t || o);
-        if (r) {
-            this.state.matchScore[1 === this.state.currentPlayer ? 0 : 1]++, Speaker.speak("Game Shot", 100);
-            if (o) {
-                let e = prompt("Darts used? (1, 2, or 3)", "1");
-                this.state.dartsInTurn = parseInt(e) || 3
+    logicCricket: function(val, type) {
+        if(this.state.dartsInTurn >= 3) return;
+        this.state.dartsInTurn++;
+        
+        // Only 15-20 and Bull count
+        if (val >= 15 || val === 25) {
+            const p = this.state.currentPlayer;
+            const op = p===1?2:1;
+            let hits = type==='T'?3 : type==='D'?2 : 1;
+            if(val===25) hits = type==='D'?2 : 1; // Bull Logic
+            
+            // Apply hits
+            while(hits > 0) {
+                if(this.state.cricket[p][val] < 3) {
+                    this.state.cricket[p][val]++;
+                    hits--;
+                } else {
+                    // Points?
+                    if(this.state.cricket[op][val] < 3) {
+                        const pts = val===25?25:val;
+                        if(p===1) this.state.cricket.s1 += pts;
+                        else this.state.cricket.s2 += pts;
+                        Speaker.speak(String(pts), 0);
+                    }
+                    hits--;
+                }
             }
-            1 === this.state.currentPlayer && (this.state.matchTotalScore += 501, this.state.matchTotalDarts += this.state.dartsInTurn), this.checkMatchWin()
-        } else a <= 1 && 0 !== a ? (Speaker.speak("Bust!", 0), this.state.turnScore = 0, o || (this.state.dartsInTurn = 3)) : (1 === this.state.currentPlayer ? this.state.score = a : this.state.p2Score = a, this.state.turnScore += e, Speaker.speak(`${e}`, e));
-        this.updateUI()
+            this.renderCricketBoard();
+            document.getElementById("hud-val-1").innerText = this.state.cricket.s1;
+            document.getElementById("hud-val-2").innerText = this.state.cricket.s2;
+        }
+    },
+    logicX01: function(pts, type, isManual) {
+        if (!isManual && this.state.dartsInTurn >= 3) return;
+        if (!isManual) this.state.dartsInTurn++;
+        
+        const cur = this.state.currentPlayer === 1 ? this.state.score : this.state.p2Score;
+        const left = cur - pts;
+        
+        const isDouble = (type === "D" || isManual);
+        if (left === 0 && isDouble) {
+            const pIdx = this.state.currentPlayer === 1 ? 0 : 1;
+            this.state.matchScore[pIdx]++;
+            Speaker.speak("Game Shot", 100);
+            if(isManual) { const d=prompt("Darts used?"); this.state.dartsInTurn=parseInt(d)||3; }
+            if (this.state.currentPlayer === 1) {
+                this.state.matchTotalScore += 501; this.state.matchTotalDarts += this.state.dartsInTurn;
+            }
+            this.checkMatchWin(); return;
+        }
+        
+        if (left <= 1 && left !== 0) {
+            Speaker.speak("Bust!", 0); this.state.turnScore = 0; if (!isManual) this.state.dartsInTurn = 3;
+        } else {
+            if (this.state.currentPlayer === 1) this.state.score = left; else this.state.p2Score = left;
+            this.state.turnScore += pts; Speaker.speak(pts.toString(), pts);
+        }
+        this.updateUI();
     },
     checkMatchWin: function() {
         if (this.state.matchScore[0] >= 3 || this.state.matchScore[1] >= 3) {
-            if ("league" === this.mode && this.state.matchScore[0] >= 3) {
-                const e = this.state.matchTotalDarts > 0 ? (this.state.matchTotalScore / this.state.matchTotalDarts * 3).toFixed(1) : "0.0";
-                Stats.addMatch(e, "W"), Stats.updateLeague(this.state.botIdx)
+            if (this.mode === "league" && this.state.matchScore[0] >= 3) {
+                const avg = this.state.matchTotalDarts > 0 ? (this.state.matchTotalScore / this.state.matchTotalDarts * 3).toFixed(1) : "0.0";
+                Stats.addMatch(avg, "W"); Stats.updateLeague(this.state.botIdx);
             }
-            alert(`Match Over! ${this.state.matchScore[0]} - ${this.state.matchScore[1]}`), this.goHome()
-        } else alert(`Leg Over. ${this.state.matchScore[0]} - ${this.state.matchScore[1]}`), this.resetLeg()
+            alert(`Match Over! ${this.state.matchScore[0]} - ${this.state.matchScore[1]}`); this.goHome();
+        } else { alert(`Leg Over. ${this.state.matchScore[0]} - ${this.state.matchScore[1]}`); this.resetLeg(); }
     },
     resetLeg: function() {
-        this.state.score = 501, this.state.p2Score = 501, this.state.dartsInTurn = 0, this.state.turnScore = 0, BoardRenderer.render(this.handleHit.bind(this), !1), this.updateUI()
+        this.state.score = 501; this.state.p2Score = 501; this.state.dartsInTurn = 0; this.state.turnScore = 0;
+        // Cricket reset
+        this.state.cricket = { 1: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, 2: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, s1:0, s2:0 };
+        BoardRenderer.render(this.handleHit.bind(this)); this.updateUI();
     },
     updateUI: function() {
-        document.getElementById("hud-val-1").innerText = this.state.score, document.getElementById("hud-val-2").innerText = "league" === this.mode ? this.state.p2Score : this.state.p2Score, document.getElementById("match-score-display").innerText = `${this.state.matchScore[0]} - ${this.state.matchScore[1]}`;
-        const e = document.getElementById("p1-box"), t = document.getElementById("p2-box");
-        1 === this.state.currentPlayer ? (e.classList.remove("inactive"), t.classList.add("inactive")) : (t.classList.remove("inactive"), e.classList.add("inactive"));
-        const o = Strategist.getCheckout(1 === this.state.currentPlayer ? this.state.score : this.state.p2Score);
-        document.getElementById("checkout-display").innerText = o ? o : ""
+        document.getElementById("hud-val-1").innerText = this.state.score;
+        document.getElementById("hud-val-2").innerText = this.state.p2Score;
+        document.getElementById("match-score-display").innerText = `${this.state.matchScore[0]} - ${this.state.matchScore[1]}`;
+        const p1 = document.getElementById("p1-box"), p2 = document.getElementById("p2-box");
+        if (this.state.currentPlayer === 1) { p1.classList.remove("inactive"); p2.classList.add("inactive"); }
+        else { p2.classList.remove("inactive"); p1.classList.add("inactive"); }
+        const hint = Strategist.getCheckout(this.state.currentPlayer === 1 ? this.state.score : this.state.p2Score);
+        document.getElementById("checkout-display").innerText = hint;
     },
-    logicBobs: function(e, t) {
+    logicBobs: function(val, type) {
         if (this.state.dartsInTurn >= 3) return;
         this.state.dartsInTurn++;
-        const o = this.state.targetList[this.state.targetIndex], n = 25 === o;
-        let a = 0;
-        n && 25 === e && "D" === t ? a = 50 : !n && e === o && "D" === t && (a = 2 * e), a > 0 ? (this.state.turnScore += a, this.state.score += a, Speaker.speak("Yes!", 60)) : Speaker.speak("Miss", 0), document.getElementById("hud-val-1").innerText = this.state.score
+        const target = this.state.targetList[this.state.targetIndex];
+        const isBull = target === 25;
+        let p = 0;
+        if (isBull) { if (val === 25 && type === "D") p = 50; } else { if (val === target && type === "D") p = val * 2; }
+        if (p > 0) { this.state.score += p; Speaker.speak("Yes!", 60); } else Speaker.speak("Miss", 0);
+        document.getElementById("hud-val-1").innerText = this.state.score;
     },
-    logicJDC: function(e, t) {
-        const o = this.state.jdcLevel;
-        let n = 0;
-        o < 6 ? e >= 10 && e <= 15 && "D" === t && (n = e * 2) : o < 12 ? e >= 15 && e <= 20 && "T" === t && (n = e * 3) : 25 === e && (n = 50), n > 0 && (this.state.turnScore += n, this.state.score += n, Speaker.speak("Yes!", 60)), this.state.dartsInTurn++, document.getElementById("checkout-display").innerText = "Dart " + (this.state.dartsInTurn + 1) + "/3", this.state.dartsInTurn >= 3 && (this.state.dartsInTurn = 0, this.state.jdcLevel++, document.getElementById("checkout-display").innerText = "Dart 1/3", this.state.jdcLevel > 12 ? (alert("JDC Finished! Score: " + this.state.score), this.goHome()) : document.getElementById("hud-val-2").innerText = this.state.jdcLevel < 6 ? "Double " + (10 + this.state.jdcLevel) : this.state.jdcLevel < 12 ? "Treble " + (15 + (this.state.jdcLevel - 6)) : "Bullseye"), document.getElementById("hud-val-1").innerText = this.state.score
+    logicJDC: function(val, type) {
+        const l = this.state.jdcLevel;
+        let pts = 0;
+        let target = 0, tType = 'D';
+        if (l < 6) { target = 10 + l; tType = 'D'; }
+        else if (l < 12) { target = 15 + (l - 6); tType = 'T'; }
+        else { target = 25; tType = 'B'; }
+        
+        if (tType === 'B') { if (val === 25) pts = type === 'D' ? 50 : 25; }
+        else { if (val === target && type === tType) pts = val * (tType === 'D' ? 2 : 3); }
+        
+        if (pts > 0) this.state.score += pts;
+        this.state.dartsInTurn++;
+        document.getElementById("checkout-display").innerText = "Dart " + (this.state.dartsInTurn + 1) + "/3";
+        
+        if (this.state.dartsInTurn >= 3) {
+            this.state.dartsInTurn = 0; this.state.jdcLevel++;
+            document.getElementById("checkout-display").innerText = "Dart 1/3";
+            if (this.state.jdcLevel > 12) { alert("JDC Finished! Score: " + this.state.score); this.goHome(); return; }
+            let txt = "";
+            if (this.state.jdcLevel < 6) txt = "Double " + (10 + this.state.jdcLevel);
+            else if (this.state.jdcLevel < 12) txt = "Treble " + (15 + (this.state.jdcLevel - 6));
+            else txt = "Bullseye";
+            document.getElementById("hud-val-2").innerText = txt;
+        }
+        document.getElementById("hud-val-1").innerText = this.state.score;
     },
     handleAction: function() {
-        if ("league" === this.mode) {
-            if (0 === this.state.dartsInTurn && "board" === this.inputMode) return;
+        if(this.mode==="cricket" || this.mode==="pvp") {
+            if(this.state.dartsInTurn===0 && this.inputMode==="board") return;
+            this.state.currentPlayer = this.state.currentPlayer===1?2:1;
+            this.state.dartsInTurn=0; this.state.turnScore=0;
+            Speaker.speak("Player "+this.state.currentPlayer, 0);
+            this.updateUI();
+        }
+        else if (this.mode === "league") {
+            if (this.state.dartsInTurn === 0 && this.inputMode === "board") return;
             document.getElementById("status-msg").innerText = "Opponent throwing...";
             const e = BOTS[this.state.botIdx];
-            setTimeout((() => {
+            setTimeout(() => {
                 const t = Math.floor(20 * Math.random()) - 10;
                 let o = e.avg + t;
-                this.state.p2Score - o <= 1 && (Math.random() < e.checkout ? (this.state.matchScore[1]++, Speaker.speak("Game Shot", 100), this.checkMatchWin()) : o = 0), this.state.p2Score -= o, this.updateUI(), document.getElementById("status-msg").innerText = "Your Turn", this.state.dartsInTurn = 0, this.state.turnScore = 0, "board" === this.inputMode && BoardRenderer.render(this.handleHit.bind(this))
-            }), 800)
-        } else if ("pvp" === this.mode) {
-            if (0 === this.state.dartsInTurn && "board" === this.inputMode) return;
-            this.state.currentPlayer = 1 === this.state.currentPlayer ? 2 : 1, this.state.dartsInTurn = 0, this.state.turnScore = 0, Speaker.speak("Player " + this.state.currentPlayer, 0), this.updateUI(), "board" === this.inputMode && BoardRenderer.render(this.handleHit.bind(this))
-        } else if ("bobs27" === this.mode) {
-            0 === this.state.turnScore && (this.state.score -= 25 === this.state.targetList[this.state.targetIndex] ? 25 : 2 * this.state.targetList[this.state.targetIndex], Speaker.speak("Minus", 0)), this.state.score < 0 ? (alert("BUST!"), this.goHome()) : (this.state.targetIndex++, this.state.targetIndex >= this.state.targetList.length ? (alert("Finished!"), this.goHome()) : (document.getElementById("hud-val-1").innerText = this.state.score, document.getElementById("hud-val-2").innerText = 25 === this.state.targetList[this.state.targetIndex] ? "Bull" : "D" + this.state.targetList[this.state.targetIndex], this.state.dartsInTurn = 0, this.state.turnScore = 0, BoardRenderer.render(this.handleHit.bind(this))))
+                if(this.state.p2Score - o <= 1) {
+                    if (Math.random() < e.checkout) { this.state.matchScore[1]++; this.checkMatchWin(); return; } else o = 0;
+                }
+                this.state.p2Score -= o;
+                Speaker.speak("Bot " + o, o);
+                this.updateUI();
+                this.state.dartsInTurn = 0; this.state.turnScore = 0;
+                document.getElementById("status-msg").innerText = "Your Turn";
+            }, 1000);
+        } else if (this.mode === "bobs27") {
+            if (this.state.turnScore === 0) {
+                const t = this.state.targetList[this.state.targetIndex];
+                const pen = t === 25 ? 25 : t * 2;
+                this.state.score -= pen;
+                Speaker.speak("Minus " + pen, 0);
+            }
+            if (this.state.score < 0) { alert("BUST!"); this.goHome(); return; }
+            this.state.targetIndex++;
+            if (this.state.targetIndex >= this.state.targetList.length) { alert("Finished! Score: " + this.state.score); this.goHome(); return; }
+            const next = this.state.targetList[this.state.targetIndex];
+            document.getElementById("hud-val-1").innerText = this.state.score;
+            document.getElementById("hud-val-2").innerText = next === 25 ? "Bull" : "D" + next;
+            this.state.dartsInTurn = 0; this.state.turnScore = 0;
         }
     },
-    undo: function() {
-        alert("Undo disabled in Pro Mode")
-    }
+    undo: function() { alert("Undo disabled in Pro Mode"); }
 };
-Voice.init(), Stats.load();
+
+Voice.init(); Stats.load();
 </script>
 </body>
 </html>
