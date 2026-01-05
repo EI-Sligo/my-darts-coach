@@ -2,47 +2,89 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DartsOS v11: Cricket & SFX</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>DartsOS v16.4: Select Bot</title>
     <style>
         :root {
             --bg: #121212; --panel: #1e1e1e; --primary: #00e676; --secondary: #2979ff; --danger: #ff1744;
             --text-main: #ffffff; --text-dim: #b0bec5; --highlight: #ffd700;
         }
-        body { background: var(--bg); color: var(--text-main); font-family: system-ui, -apple-system, sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; user-select: none; }
+        body { 
+            background: var(--bg); color: var(--text-main); font-family: system-ui, -apple-system, sans-serif; 
+            margin: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; user-select: none; 
+        }
         .screen { display: none; flex-direction: column; height: 100%; width: 100%; }
         .screen.active { display: flex; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        header { padding: 15px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
+        
+        header { 
+            padding: 15px; background: var(--panel); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; flex-shrink: 0; 
+        }
+        
         .icon-btn { background: #333; color: #aaa; border: 1px solid #444; border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; transition: all 0.2s; }
         .icon-btn.active { background: var(--primary); color: black; border-color: var(--primary); }
         .icon-btn.listening { background: var(--danger); color: white; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-        .main-area { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px; overflow-y: auto; }
+        
+        .main-area { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px; overflow-y: auto; padding-bottom: 40px; position: relative; }
+        
         .menu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; max-width: 600px; margin-bottom: 20px; }
         .menu-card { background: var(--panel); border: 1px solid #333; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; position: relative; overflow: hidden; }
         .menu-card:active { transform: scale(0.98); border-color: var(--primary); }
+        
         .chart-container { width: 100%; max-width: 600px; height: 150px; background: #222; border-radius: 12px; margin-top: 10px; position: relative; border: 1px solid #333; }
-        .hud-panel { width: 100%; max-width: 600px; background: var(--panel); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .hud-panel { width: 100%; max-width: 600px; background: var(--panel); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-start; flex-shrink: 0; }
         .hud-score-box { text-align: center; flex: 1; transition: opacity 0.3s; cursor: pointer; }
         .hud-score-box.inactive { opacity: 0.4; }
-        .hud-score { font-size: 2.5rem; font-weight: bold; color: var(--primary); }
+        .hud-score { font-size: 2.5rem; font-weight: bold; color: var(--primary); line-height: 1; }
         .hud-label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; font-weight: bold; }
         .bot-score { color: var(--danger); }
-        .leg-score { background: #333; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 1.2rem; margin: 0 10px; }
-        .checkout-hint { background: #333; color: var(--highlight); padding: 5px 10px; border-radius: 4px; font-size: 0.9rem; font-weight: bold; margin-top: 5px; display: inline-block; min-height: 20px; border: 1px solid #444; }
+        
+        .hud-meta { font-size: 0.8rem; color: #888; margin-top: 5px; height: 20px; }
+        .checkout-hint { 
+            background: #2e7d32; color: white; padding: 5px 10px; border-radius: 4px; font-size: 0.9rem; font-weight: bold; 
+            margin-top: 5px; display: inline-block; min-height: 20px; border: 1px solid #4caf50; 
+        }
+        
         #board-container { width: 100%; max-width: 450px; aspect-ratio: 1/1; position: relative; margin: 10px 0; flex-shrink: 0; display: block; }
-        svg { width: 100%; height: 100%; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
+        svg { width: 100%; height: 100%; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); touch-action: manipulation; }
+        
         #numpad-container { width: 100%; max-width: 450px; height: 400px; display: none; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0; }
         .pad-btn { background: #333; color: white; border: none; border-radius: 8px; font-size: 1.5rem; font-weight: bold; cursor: pointer; }
         .pad-btn:active { background: var(--primary); color: black; }
         .pad-enter { background: var(--primary); color: black; grid-column: span 3; }
-        .controls { display: flex; gap: 10px; width: 100%; max-width: 450px; padding-bottom: 20px; margin-top: auto; }
+        
+        .controls { 
+            display: flex; gap: 10px; width: 100%; max-width: 450px; 
+            padding-bottom: env(safe-area-inset-bottom, 20px); margin-top: auto; flex-shrink: 0; 
+        }
         .btn { flex: 1; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; background: #333; color: white; }
         .btn-primary { background: var(--primary); color: black; }
         .btn-miss { background: #424242; color: #ff5252; border: 1px solid #ff5252; flex: 0.4; }
         .rank-badge { background: var(--highlight); color: black; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; position: absolute; top: 10px; right: 10px; }
         
+        /* OVERLAYS */
+        #setup-modal, #report-modal, #history-modal { 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; 
+            overflow-y: auto; padding: 20px; box-sizing: border-box;
+        }
+        .modal-card { background: var(--panel); padding: 30px; border-radius: 12px; text-align: center; width: 100%; max-width: 400px; border: 1px solid #333; }
+        .modal-row { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
+        select { background: #333; color: white; padding: 10px; border: 1px solid #555; border-radius: 6px; font-size: 1.1rem; width: 150px; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
+        .stat-item { background: #222; padding: 10px; border-radius: 6px; }
+        .stat-val { color: var(--primary); font-size: 1.5rem; font-weight: bold; display: block; }
+        .stat-lbl { color: #888; font-size: 0.8rem; }
+
+        /* HISTORY LIST */
+        .history-list { text-align: left; max-height: 400px; overflow-y: auto; margin-bottom: 20px; }
+        .hist-row { padding: 10px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .hist-win { border-left: 4px solid var(--primary); }
+        .hist-loss { border-left: 4px solid var(--danger); }
+        .hist-date { font-size: 0.8rem; color: #666; display: block; }
+        .hist-details { font-size: 0.9rem; color: white; }
+
         /* CRICKET UI */
         #cricket-board { display: none; width: 100%; max-width: 450px; margin-bottom: 10px; background: #222; border-radius: 8px; overflow: hidden; }
         .crick-row { display: flex; border-bottom: 1px solid #333; height: 35px; align-items: center; }
@@ -50,27 +92,119 @@
         .crick-mk { flex: 2; text-align: center; color: white; font-weight: bold; font-family: monospace; font-size: 1.2rem; }
         .crick-mk.closed { color: #555; }
         .crick-header { background: #333; color: var(--highlight); font-size: 0.8rem; height: 25px; }
+
+        /* 180 ANIMATION */
+        #max-overlay {
+            display: none; position: absolute; top:0; left:0; width:100%; height:100%;
+            background: rgba(255, 215, 0, 0.2); pointer-events: none;
+            justify-content: center; align-items: center; z-index: 50;
+            animation: flash 0.5s infinite alternate;
+        }
+        .max-text { font-size: 5rem; font-weight: 900; color: #ffd700; text-shadow: 0 0 20px #fff; transform: rotate(-15deg); }
+        @keyframes flash { from { opacity: 0.5; } to { opacity: 1; } }
     </style>
 </head>
 <body>
 
+<div id="setup-modal">
+    <div class="modal-card">
+        <h2 id="setup-title">Match Setup</h2>
+        
+        <div id="setup-league" class="setup-group">
+            <div class="modal-row" id="row-opponent">
+                <span>Opponent</span>
+                <select id="set-bot-level"></select>
+            </div>
+            <div class="modal-row">
+                <span>Start Score</span>
+                <select id="set-score">
+                    <option value="301">301</option>
+                    <option value="501" selected>501</option>
+                    <option value="701">701</option>
+                </select>
+            </div>
+            <div class="modal-row">
+                <span>Format</span>
+                <select id="set-legs">
+                    <option value="1">1 Leg</option>
+                    <option value="3" selected>Best of 3</option>
+                    <option value="5">Best of 5</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="setup-rtc" class="setup-group" style="display:none">
+            <div class="modal-row">
+                <span>Difficulty</span>
+                <select id="set-rtc-mode">
+                    <option value="S">Singles (Standard)</option>
+                    <option value="D">Doubles (Pro)</option>
+                    <option value="T">Trebles (Elite)</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="app.confirmSetup()">START</button>
+        <button class="btn" style="margin-top:10px;background:#333" onclick="app.closeSetup()">Cancel</button>
+    </div>
+</div>
+
+<div id="report-modal">
+    <div class="modal-card">
+        <h2>Match Report</h2>
+        <h3 id="report-result" style="color:var(--primary)">WINNER</h3>
+        <div class="stat-grid">
+            <div class="stat-item">
+                <span class="stat-val" id="rep-avg">0.0</span>
+                <span class="stat-lbl">3-Dart Avg</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-val" id="rep-doubles">0%</span>
+                <span class="stat-lbl">Checkout Rate</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-val" id="rep-best">--</span>
+                <span class="stat-lbl">Best Leg (Darts)</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-val" id="rep-score">0-0</span>
+                <span class="stat-lbl">Final Score</span>
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="app.closeReport()">Main Menu</button>
+    </div>
+</div>
+
+<div id="history-modal">
+    <div class="modal-card" style="max-width: 500px;">
+        <h2>Career History</h2>
+        <div class="history-list" id="history-list"></div>
+        <button class="btn btn-primary" onclick="document.getElementById('history-modal').style.display='none'">Close</button>
+        <button class="btn" style="margin-top:10px; background:#444;" onclick="Stats.exportData()">Download Data</button>
+    </div>
+</div>
+
 <div id="screen-menu" class="screen active">
     <header>
-        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v11</span></h1>
+        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v16.4</span></h1>
         <div style="display:flex; gap:10px;">
-            <div id="settings-btn" class="icon-btn" onclick="Stats.exportData()">💾</div>
+            <div id="settings-btn" class="icon-btn" onclick="Stats.showHistory()">📊</div>
         </div>
     </header>
     <div class="main-area">
         <div style="width:100%; max-width:600px; display:flex; justify-content:space-between; align-items:end; margin-top:10px;">
-            <span style="font-size:0.9rem; color:#aaa;">Your Form (Last 10 Matches)</span>
+            <span style="font-size:0.9rem; color:#aaa;">Performance Trend</span>
             <span id="current-avg-display" style="font-weight:bold; color:var(--primary)">Avg: --</span>
         </div>
         <div class="chart-container" id="chart-area"></div>
+        
         <h2 style="margin-top: 20px;">Game Modes</h2>
         <div class="menu-grid">
-            <div class="menu-card" onclick="app.loadMode('league')">
+            <div class="menu-card" onclick="app.openSetup('league')">
                 <span class="rank-badge" id="league-rank">ROOKIE</span><span style="font-size:2rem">🏆</span><br><b>Bot League</b><br><span style="font-size:0.8rem; color:#888">X01 Match Play</span>
+            </div>
+            <div class="menu-card" onclick="app.openSetup('rtc')">
+                <span style="font-size:2rem">⏰</span><br><b>Round The Clock</b><br><span style="font-size:0.8rem; color:#888">1-20 Accuracy Drill</span>
             </div>
             <div class="menu-card" onclick="app.loadMode('cricket')">
                 <span style="font-size:2rem">🦗</span><br><b>Cricket</b><br><span style="font-size:0.8rem; color:#888">Tactical Attack</span>
@@ -81,10 +215,10 @@
             <div class="menu-card" onclick="app.loadMode('bobs27')">
                 <span style="font-size:2rem">☠️</span><br><b>Bob's 27</b><br><span style="font-size:0.8rem; color:#888">Doubles Practice</span>
             </div>
-            <div class="menu-card" onclick="app.loadMode('practice')">
-                <span style="font-size:2rem">🔥</span><br><b>Heatmap</b><br><span style="font-size:0.8rem; color:#888">Analysis</span>
+            <div class="menu-card" onclick="app.loadMode('train_out')">
+                <span style="font-size:2rem">🎯</span><br><b>Checkout Trainer</b><br><span style="font-size:0.8rem; color:#888">Pressure Practice</span>
             </div>
-            <div class="menu-card" onclick="app.loadMode('pvp')">
+            <div class="menu-card" onclick="app.openSetup('pvp')">
                 <span style="font-size:2rem">👥</span><br><b>Vs Player</b><br><span style="font-size:0.8rem; color:#888">Pass & Play</span>
             </div>
         </div>
@@ -98,26 +232,29 @@
         <div style="display:flex; gap:10px; align-items:center;">
             <div id="input-toggle" class="icon-btn" onclick="app.toggleInput()">🎯</div>
             <div id="mic-toggle-game" class="icon-btn" onclick="Voice.toggle()">🎙️</div>
+            <div id="restart-game" class="icon-btn" onclick="app.resetLeg()">↺</div>
             <button class="btn" style="width: auto; padding: 5px 15px; font-size: 0.8rem;" onclick="app.goHome()">Exit</button>
         </div>
     </header>
     <div class="main-area">
+        <div id="max-overlay"><div class="max-text">180!</div></div>
         <div class="hud-panel">
             <div class="hud-score-box" id="p1-box" onclick="app.renameUser()">
                 <div class="hud-label" id="hud-lbl-1">YOU</div>
                 <div class="hud-score" id="hud-val-1">501</div>
+                <div class="hud-meta" id="p1-meta"></div>
                 <div class="checkout-hint" id="checkout-display"></div>
             </div>
             <div class="leg-score" id="match-score-display">0 - 0</div>
             <div class="hud-score-box" id="p2-box">
                 <div class="hud-label" id="hud-lbl-2">BOT</div>
                 <div class="hud-score bot-score" id="hud-val-2">501</div>
+                <div class="hud-meta" id="p2-meta"></div>
                 <div class="hud-label" id="hud-sub-2"></div>
             </div>
         </div>
 
         <div id="cricket-board"></div>
-
         <div id="board-container"></div>
         
         <div id="numpad-container">
@@ -148,26 +285,55 @@ const BOTS = [
     { name: "The Iceman", avg: 95, checkout: 0.9 }
 ];
 
+// --- STRATEGIST ---
+const Strategist = {
+    routes: {
+        170:"T20 T20 Bull", 167:"T20 T19 Bull", 164:"T20 T18 Bull", 161:"T20 T17 Bull",
+        130:"T20 T18 D8", 129:"T19 T16 D12", 128:"T18 T14 D16", 127:"T20 T17 D8", 126:"T19 T19 D6", 125:"Bull T17 D12", 124:"T20 T16 D8", 123:"T19 T16 D9", 122:"T18 T20 D4", 121:"T20 T11 D14", 120:"T20 20 D20"
+    },
+    getCheckout: function(score) {
+        if (score > 170 || score < 2) return "";
+        if ([169, 168, 166, 165, 163, 162, 159].includes(score)) return "No checkout";
+        if (this.routes[score]) return this.routes[score];
+        if (score <= 40 && score % 2 === 0) return "D" + (score / 2);
+        if (score === 50) return "Bullseye";
+        for (let first = 60; first >= 1; first--) {
+            let rem = score - first;
+            if (rem >= 2 && rem <= 40 && rem % 2 === 0) {
+                let firstTxt = first;
+                if(first % 3 === 0 && first > 20) firstTxt = "T" + (first/3);
+                else if(first > 20 && first !== 25 && first !== 50) continue;
+                return `${firstTxt} D${rem/2}`;
+            }
+        }
+        return "Setup shot";
+    }
+};
+
+// --- AUDIO ---
 const SFX = {
-    playThud: function() {
-        try {
+    ctx: null,
+    init: function() {
+        if (!this.ctx) {
             const C = window.AudioContext || window.webkitAudioContext;
-            if(!C) return;
-            const ctx = new C();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            
-            osc.frequency.setValueAtTime(150, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.1);
-            
-            gain.gain.setValueAtTime(0.5, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-            
-            osc.start();
-            osc.stop(ctx.currentTime + 0.1);
-        } catch(e) {}
+            if (C) this.ctx = new C();
+        }
+    },
+    playThud: function() {
+        if (navigator.vibrate) navigator.vibrate(40);
+        this.init();
+        if (!this.ctx) return;
+        try {
+            if(this.ctx.state === 'suspended') this.ctx.resume();
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain); gain.connect(this.ctx.destination);
+            osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+            osc.start(); osc.stop(this.ctx.currentTime + 0.1);
+        } catch (e) {}
     }
 };
 
@@ -176,29 +342,9 @@ const Speaker = {
         if(!window.speechSynthesis) return;
         window.speechSynthesis.cancel();
         if (180 === t) {
-            const o = new SpeechSynthesisUtterance("ONE HUNDRED AND EIGHTY!");
-            o.pitch = .8, o.volume = 1, window.speechSynthesis.speak(o);
-            return;
+            const t=new SpeechSynthesisUtterance("ONE HUNDRED AND EIGHTY!");return t.pitch=.8,t.volume=1,void window.speechSynthesis.speak(t)
         }
-        const o = new SpeechSynthesisUtterance(e);
-        t >= 100 ? o.pitch = .9 : t >= 60 ? o.pitch = 1 : o.pitch = 1.1;
-        window.speechSynthesis.speak(o);
-    }
-};
-
-const Strategist = {
-    getCheckout: function(score) {
-        if (score > 170 || score < 2) return "";
-        if (score === 50) return "Bullseye";
-        if (score <= 40 && score % 2 === 0) return "D" + (score / 2);
-        for (let first = 60; first >= 1; first--) {
-            let rem = score - first;
-            if (rem >= 2 && rem <= 40 && rem % 2 === 0 && first % 3 === 0 && first <= 60) return "T" + (first/3) + " D" + (rem/2);
-            if (rem >= 2 && rem <= 40 && rem % 2 === 0 && first <= 20) return first + " D" + (rem/2);
-            if (score - 50 >= 2 && (score - 50) % 2 === 0 && (score - 50) <= 40) return "Bull D" + ((score-50)/2);
-            if (score - 25 >= 2 && (score - 25) % 2 === 0 && (score - 25) <= 40) return "25 D" + ((score-25)/2);
-        }
-        return "No easy shot";
+        const o=new SpeechSynthesisUtterance(e);t>=100?o.pitch=.9:t>=60?o.pitch=1:o.pitch=1.1,window.speechSynthesis.speak(o)
     }
 };
 
@@ -217,36 +363,55 @@ const Voice = {
         if (!this.recognition) return alert("Voice not supported on this device");
         this.isListening ? (this.recognition.stop(), this.isListening = !1) : (this.recognition.start(), this.isListening = !0);
         const e = this.isListening ? "icon-btn listening" : "icon-btn";
-        document.getElementById("mic-toggle-menu").className = e, document.getElementById("mic-toggle-game").className = e;
+        const m = document.getElementById("mic-toggle-menu"); const g = document.getElementById("mic-toggle-game");
+        if(m) m.className = e; if(g) g.className = e;
     },
     processCommand: function(e) {
         const t = e.toLowerCase().trim();
         if (t.includes("next")) return app.handleAction();
-        let o = "S";
-        if(t.includes("double")) o = "D"; if(t.includes("triple")) o = "T";
+        let o = "S"; if(t.includes("double")) o = "D"; if(t.includes("triple")) o = "T";
         let n = 0;
         if (t.includes("bull")) n = 50; else if (t.includes("25")) n = 25;
         else { const m = t.match(/(\d+)/); if (m) n = parseInt(m[0]); }
-        if (n > 0 && n <= 50) {
-            if (n === 50) { n = 25; o = "D"; }
-            app.handleHit(n, o);
-        }
+        if (n > 0 && n <= 50) { if (n === 50) { n = 25; o = "D"; } app.handleHit(n, o); }
     }
 };
 
-// --- STATS ---
+// --- STATS (WITH SANITY CHECK) ---
 const Stats = {
-    data: { matches: [], leagueRank: 0, drillLevel: 0, heatmap: [], userName: "YOU" },
+    data: { matches: [], leagueRank: 0, drillLevel: 0, heatmap: [], userName: "YOU", bestLeg: 999, highOut: 0 },
     load: function() {
-        const e = localStorage.getItem("darts_v11");
-        if (e) this.data = JSON.parse(e);
+        try {
+            const e = localStorage.getItem("darts_v16");
+            if (e) this.data = JSON.parse(e);
+            if(!this.data.userName || this.data.userName === "undefined") this.data.userName = "YOU";
+            
+            // --- SANITY CHECK ---
+            if (this.data.bestLeg < 6) { 
+                console.log("Fixing corrupted best leg record.");
+                this.data.bestLeg = 999; 
+                this.save();
+            }
+            // --------------------
+            
+        } catch(e) {}
         this.renderChart(); this.updateBadges();
     },
-    save: function() { localStorage.setItem("darts_v11", JSON.stringify(this.data)) },
+    save: function() { localStorage.setItem("darts_v16", JSON.stringify(this.data)) },
     setName: function(n) { this.data.userName = n; this.save(); },
-    addMatch: function(e, t) {
-        this.data.matches.push({ avg: parseFloat(e), result: t, type: "x01" });
-        if (this.data.matches.length > 20) this.data.matches.shift();
+    addMatch: function(avg, res, doubles = 0, missed = 0) {
+        // Use currently selected bot for opponent name
+        const opponent = app.mode === "league" && app.settings.botIdx !== undefined ? BOTS[app.settings.botIdx].name : "Player 2";
+        this.data.matches.push({ 
+            date: new Date().toLocaleDateString(), avg: parseFloat(avg), result: res, 
+            type: "x01", opponent: opponent, checkoutPerc: missed+doubles > 0 ? Math.round((doubles / (doubles+missed))*100) : 0
+        });
+        if (this.data.matches.length > 50) this.data.matches.shift();
+        this.save();
+    },
+    updateRecords: function(darts, checkout) {
+        if (darts >= 6 && darts < this.data.bestLeg) this.data.bestLeg = darts;
+        if (checkout > this.data.highOut) this.data.highOut = checkout;
         this.save();
     },
     addHeatmapPoint: function(x, y) {
@@ -255,21 +420,27 @@ const Stats = {
         this.save();
     },
     updateLeague: function(e) { if(e === this.data.leagueRank){ this.data.leagueRank++; this.save(); } },
+    showHistory: function() {
+        const list = document.getElementById("history-list");
+        list.innerHTML = "";
+        [...this.data.matches].reverse().forEach(m => {
+            const cls = m.result === "W" ? "hist-win" : "hist-loss";
+            list.innerHTML += `<div class="hist-row ${cls}"><div><span class="hist-date">${m.date} vs ${m.opponent}</span><div class="hist-details">Avg: ${m.avg} | Checkout: ${m.checkoutPerc}%</div></div><div style="font-weight:bold;font-size:1.2rem;">${m.result}</div></div>`;
+        });
+        document.getElementById("history-modal").style.display = "flex";
+    },
     exportData: function() {
         const e = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data));
-        const t = document.createElement("a");
-        t.href = e; t.download = "dartsos_backup.json"; document.body.appendChild(t); t.click(); t.remove();
+        const t = document.createElement("a"); t.href = e; t.download = "dartsos_backup.json"; document.body.appendChild(t); t.click(); t.remove();
     },
-    clear: function() { if(confirm("Reset all data?")) { localStorage.removeItem("darts_v11"); location.reload(); } },
+    clear: function() { if(confirm("Reset all data?")) { localStorage.removeItem("darts_v16"); location.reload(); } },
     renderChart: function() {
         const e = document.getElementById("chart-area");
         const t = this.data.matches.filter(x => x.type === "x01");
         if (t.length < 2) return e.innerHTML = "<div style='padding:60px;text-align:center;color:#555'>Play matches to see stats</div>";
         const avgs = t.map(x => x.avg);
-        const max = Math.max(...avgs) + 5; const min = Math.max(0, Math.min(...avgs) - 5);
-        const w = 600, h = 150;
-        let pts = "";
-        avgs.forEach((val, i) => { pts += `${i/(avgs.length-1)*w},${h-(val-min)/(max-min)*h} `; });
+        const w = 600, h = 150; let pts = "";
+        avgs.forEach((val, i) => { pts += `${i/(avgs.length-1)*w},${h-(val-20)/(100)*h} `; });
         const last3 = avgs.slice(-3);
         const curr = (last3.reduce((a,b)=>a+b,0)/last3.length).toFixed(1);
         document.getElementById("current-avg-display").innerText = "Avg: " + curr;
@@ -283,9 +454,9 @@ const Stats = {
 
 // --- RENDERER ---
 const BoardRenderer = {
-    render: function(cb, showHeat) {
-        const c = document.getElementById("board-container");
-        c.innerHTML = "";
+    render: function(cb, showHeat, markers=[]) {
+        const container = document.getElementById("board-container");
+        container.innerHTML = "";
         const n = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         n.setAttribute("viewBox", "0 0 500 500"); n.id = "dartboard-svg";
         const a = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5], r = 250;
@@ -296,46 +467,113 @@ const BoardRenderer = {
                 const u = (l * s - s / 2) * Math.PI / 180 - Math.PI / 2, h = (l * s + s / 2) * Math.PI / 180 - Math.PI / 2,
                     p = `M${r+t*Math.cos(u)},${r+t*Math.sin(u)} L${r+o*Math.cos(u)},${r+o*Math.sin(u)} A${o},${o} 0 0,1 ${r+o*Math.cos(h)},${r+o*Math.sin(h)} L${r+t*Math.cos(h)},${r+t*Math.sin(h)} A${t},${t} 0 0,0 ${r+t*Math.cos(u)},${r+t*Math.sin(u)}Z`,
                     g = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                g.setAttribute("d", p), g.setAttribute("fill", l % 2 == 0 ? d : c), g.onclick = t => e(a, i, t), n.appendChild(g)
+                g.setAttribute("d", p), g.setAttribute("fill", l % 2 == 0 ? d : c), g.onclick = t => cb(a, i, t), n.appendChild(g)
             })
         }
         i(162, 170, "D", "#e53935", "#43a047"), i(107, 162, "S", "#121212", "#eeeeee"), i(99, 107, "T", "#e53935", "#43a047"), i(16, 99, "S", "#121212", "#eeeeee");
-        const d = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        d.setAttribute("cx", r), d.setAttribute("cy", r), d.setAttribute("r", 16), d.setAttribute("fill", "#43a047"), d.onclick = t => e(25, "S", t), n.appendChild(d);
-        const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        c.setAttribute("cx", r), c.setAttribute("cy", r), c.setAttribute("r", 6), c.setAttribute("fill", "#e53935"), c.onclick = t => e(25, "D", t), n.appendChild(c), showHeat && Stats.data.heatmap.forEach(e => {
+        const outerBull = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        outerBull.setAttribute("cx", r), outerBull.setAttribute("cy", r), outerBull.setAttribute("r", 16), outerBull.setAttribute("fill", "#43a047"), outerBull.onclick = t => cb(25, "S", t), n.appendChild(outerBull);
+        const innerBull = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        innerBull.setAttribute("cx", r), innerBull.setAttribute("cy", r), innerBull.setAttribute("r", 6), innerBull.setAttribute("fill", "#e53935"), innerBull.onclick = t => cb(25, "D", t), n.appendChild(innerBull);
+        
+        if(showHeat) Stats.data.heatmap.forEach(e => {
             const t = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             t.setAttribute("cx", e.x), t.setAttribute("cy", e.y), t.setAttribute("r", 2), t.setAttribute("fill", "rgba(255, 215, 0, 0.4)"), t.style.pointerEvents = "none", n.appendChild(t)
-        }), a.forEach((e, t) => {
+        });
+        
+        const colors = ["#ff1744", "#00e676", "#2979ff"];
+        markers.forEach((m, idx) => {
+            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            dot.setAttribute("cx", m.x); dot.setAttribute("cy", m.y); dot.setAttribute("r", 5);
+            dot.setAttribute("fill", colors[idx % 3]); dot.setAttribute("stroke", "white"); dot.setAttribute("stroke-width", "2");
+            dot.style.pointerEvents = "none";
+            n.appendChild(dot);
+        });
+        
+        a.forEach((e, t) => {
             const o = document.createElementNS("http://www.w3.org/2000/svg", "text"), a = (360 * t / 20 - 90) * Math.PI / 180;
             o.setAttribute("x", r + 205 * Math.cos(a)), o.setAttribute("y", r + 205 * Math.sin(a)), o.setAttribute("text-anchor", "middle"), o.setAttribute("dominant-baseline", "middle"), o.setAttribute("fill", "white"), o.setAttribute("font-size", "24"), o.setAttribute("font-weight", "bold"), o.textContent = e, o.style.pointerEvents = "none", n.appendChild(o)
-        }), o.appendChild(n)
+        });
+        container.appendChild(n);
     }
 };
 
 // --- APP ---
 const app = {
-    mode: null, state: {}, inputMode: "board", numpadBuffer: "",
+    mode: null, state: {}, inputMode: "board", numpadBuffer: "", settings: { score: 501, legs: 3, rtcMode: 'S', botIdx: 0 }, historyStack: [], markerList: [],
+    
     goHome: function() {
         document.getElementById("screen-game").classList.remove("active");
         document.getElementById("screen-menu").classList.add("active");
+        document.getElementById("report-modal").style.display = "none";
         Stats.load();
     },
+    openSetup: function(mode) {
+        this.mode = mode;
+        document.getElementById("setup-modal").style.display = "flex";
+        document.getElementById("setup-title").innerText = mode === "rtc" ? "Round The Clock" : "Match Setup";
+        document.getElementById("setup-league").style.display = mode === "rtc" ? "none" : "block";
+        document.getElementById("setup-rtc").style.display = mode === "rtc" ? "block" : "none";
+        
+        // --- NEW: Bot Selector ---
+        const botSelect = document.getElementById("set-bot-level");
+        const botRow = document.getElementById("row-opponent");
+        
+        if (mode === "league") {
+            botRow.style.display = "flex";
+            botSelect.innerHTML = "";
+            BOTS.forEach((b, i) => {
+                const opt = document.createElement("option");
+                opt.value = i;
+                opt.innerText = b.name;
+                // Default to current rank
+                if (i === Math.min(4, Stats.data.leagueRank)) opt.selected = true;
+                botSelect.appendChild(opt);
+            });
+        } else {
+            botRow.style.display = "none";
+        }
+    },
+    closeSetup: function() { document.getElementById("setup-modal").style.display = "none"; },
+    confirmSetup: function() {
+        this.settings.score = parseInt(document.getElementById("set-score").value);
+        this.settings.legs = parseInt(document.getElementById("set-legs").value);
+        this.settings.rtcMode = document.getElementById("set-rtc-mode").value;
+        this.settings.botIdx = parseInt(document.getElementById("set-bot-level").value); // Store manual bot selection
+        this.closeSetup();
+        this.loadMode(this.mode);
+    },
+    showReport: function(won, avg) {
+        const r = document.getElementById("report-modal"); r.style.display = "flex";
+        document.getElementById("report-result").innerText = won ? "VICTORY" : "DEFEAT";
+        document.getElementById("report-result").style.color = won ? "var(--primary)" : "var(--danger)";
+        document.getElementById("rep-avg").innerText = avg;
+        document.getElementById("rep-best").innerText = Stats.data.bestLeg === 999 ? "--" : Stats.data.bestLeg;
+        const miss = this.state.matchMissedDoubles || 0; const hits = this.state.matchHitDoubles || 0;
+        const rate = hits + miss > 0 ? Math.round((hits / (hits+miss))*100) + "%" : "--";
+        document.getElementById("rep-doubles").innerText = rate;
+        document.getElementById("rep-score").innerText = `${this.state.matchScore[0]} - ${this.state.matchScore[1]}`;
+    },
+    closeReport: function() { document.getElementById("report-modal").style.display = "none"; this.goHome(); },
     renameUser: function() {
         const n = prompt("Enter your name:", Stats.data.userName);
         if(n) { Stats.setName(n); document.getElementById("hud-lbl-1").innerText = n; }
     },
     toggleInput: function() {
         this.inputMode = this.inputMode === "board" ? "numpad" : "board";
-        const b = document.getElementById("board-container"), n = document.getElementById("numpad-container");
-        const btn = document.getElementById("input-toggle");
+        const b = document.getElementById("board-container"), n = document.getElementById("numpad-container"), btn = document.getElementById("input-toggle");
         if (this.inputMode === "numpad") {
             b.style.display = "none"; n.style.display = "grid"; btn.innerText = "⌨️"; btn.classList.add("active");
         } else {
             b.style.display = "block"; n.style.display = "none"; btn.innerText = "🎯"; btn.classList.remove("active");
         }
     },
-    numpadAdd: function(e) { this.numpadBuffer += e; document.getElementById("status-msg").innerText = "Score: " + this.numpadBuffer; },
+    numpadAdd: function(e) { 
+        if((this.numpadBuffer + e).length > 3) return; // Limit length
+        if(parseInt(this.numpadBuffer + e) > 180) return; // Limit value
+        this.numpadBuffer += e; 
+        document.getElementById("status-msg").innerText = "Score: " + this.numpadBuffer; 
+    },
     numpadClear: function() { this.numpadBuffer = ""; document.getElementById("status-msg").innerText = "Score: "; },
     numpadSubmit: function() {
         const e = parseInt(this.numpadBuffer);
@@ -345,12 +583,18 @@ const app = {
     },
     loadMode: function(e) {
         this.mode = e;
+        const startS = this.settings.score || 501;
         this.state = {
-            score: 501, p2Score: 501, currentPlayer: 1, dartsInTurn: 0, turnScore: 0,
+            score: startS, p2Score: startS, startScore: startS, currentPlayer: 1, dartsInTurn: 0, turnScore: 0,
+            legDarts: 0,
             matchScore: [0, 0], matchTotalScore: 0, matchTotalDarts: 0,
-            targetList: [], targetIndex: 0, jdcLevel: 0,
-            cricket: { 1: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, 2: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, s1:0, s2:0 }
+            matchMissedDoubles: 0, matchHitDoubles: 0,
+            targetList: [], targetIndex: 0, jdcLevel: 0, jdcScore: 0, rtcTarget: 1, rtcHits: 0,
+            cricket: { 1: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, 2: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, s1:0, s2:0 },
+            throwLog: [], trainerTarget: 0, trainerAttempts: 0
         };
+        this.historyStack = []; this.markerList = [];
+        
         document.getElementById("screen-menu").classList.remove("active");
         document.getElementById("screen-game").classList.add("active");
         
@@ -360,21 +604,36 @@ const app = {
         document.getElementById("cricket-board").style.display = "none";
         document.getElementById("hud-lbl-1").innerText = Stats.data.userName;
         document.getElementById("checkout-display").innerText = "";
+        document.getElementById("p1-meta").innerText = "";
+        document.getElementById("p2-meta").innerText = "";
+        document.getElementById("btn-next").innerText = "Next Round";
 
         if (e === "league") this.setupLeague();
+        else if (e === "rtc") this.setupRTC();
         else if (e === "pvp") this.setupPvP();
         else if (e === "bobs27") this.setupBobs27();
         else if (e === "jdc") this.setupJDC();
         else if (e === "cricket") this.setupCricket();
+        else if (e === "train_out") this.setupTrainer();
         else document.getElementById("game-title").innerText = "Analysis";
     },
     setupLeague: function() {
-        const i = Math.min(4, Stats.data.leagueRank);
+        // --- NEW: Use manual selection if available, else default to rank ---
+        const i = this.settings.botIdx !== undefined ? this.settings.botIdx : Math.min(4, Stats.data.leagueRank);
         this.state.botIdx = i;
-        document.getElementById("game-title").innerText = "Vs " + BOTS[i].name;
+        document.getElementById("game-title").innerText = `Vs ${BOTS[i].name}`;
         document.getElementById("p2-box").style.visibility = "visible";
         document.getElementById("match-score-display").style.visibility = "visible";
         this.updateUI();
+    },
+    setupRTC: function() {
+        const modeName = this.settings.rtcMode === 'D' ? "Doubles" : this.settings.rtcMode === 'T' ? "Trebles" : "Singles";
+        document.getElementById("game-title").innerText = `RTC (${modeName})`;
+        document.getElementById("hud-lbl-1").innerText = "HIT / 21";
+        document.getElementById("hud-val-1").innerText = "0";
+        document.getElementById("p2-box").style.visibility = "visible";
+        document.getElementById("hud-lbl-2").innerText = "TARGET";
+        document.getElementById("hud-val-2").innerText = this.settings.rtcMode === 'S' ? "1" : this.settings.rtcMode + "1";
     },
     setupCricket: function() {
         document.getElementById("game-title").innerText = "Cricket (PvP)";
@@ -394,15 +653,13 @@ const app = {
             t.innerHTML += `<div class="crick-row"><div class="crick-mk">${m1}</div><div class="crick-num">${n===25?'B':n}</div><div class="crick-mk">${m2}</div></div>`;
         });
     },
-    getMark: function(c) {
-        if(c===0) return ""; if(c===1) return "/"; if(c===2) return "X"; return "⦻";
-    },
+    getMark: function(c) { return c===0?"":c===1?"/":c===2?"X":"⦻"; },
     setupPvP: function() {
         document.getElementById("game-title").innerText = "P1 vs P2";
         document.getElementById("hud-lbl-2").innerText = "P2";
         document.getElementById("p2-box").style.visibility = "visible";
         document.getElementById("match-score-display").style.visibility = "visible";
-        document.getElementById("hud-val-2").innerText = "501";
+        document.getElementById("hud-val-2").innerText = this.state.startScore;
         this.updateUI();
     },
     setupBobs27: function() {
@@ -424,51 +681,111 @@ const app = {
         document.getElementById("hud-val-2").innerText = "Double 10";
         document.getElementById("checkout-display").innerText = "Dart 1/3";
     },
+    setupTrainer: function() {
+        document.getElementById("game-title").innerText = "Checkout Trainer";
+        document.getElementById("hud-lbl-1").innerText = "ATTEMPTS";
+        document.getElementById("hud-val-1").innerText = "0";
+        document.getElementById("p2-box").style.visibility = "visible";
+        document.getElementById("hud-lbl-2").innerText = "SCORE";
+        document.getElementById("btn-next").innerText = "Give Up / Next";
+        this.newTrainerTarget();
+    },
+    newTrainerTarget: function() {
+        this.state.score = Math.floor(Math.random()*60)+61; 
+        this.state.startScore = this.state.score; // Save target for reset
+        this.state.turnScore = 0; 
+        this.state.dartsInTurn = 0; 
+        this.markerList = []; 
+        BoardRenderer.render(this.handleHit.bind(this), false, this.markerList); 
+        document.getElementById("hud-val-2").innerText = this.state.score;
+        this.updateUI(); 
+    },
+    
     handleHit: function(val, type, e) {
         if (e) {
             const svg = document.getElementById("dartboard-svg");
             const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
             const t = pt.matrixTransform(svg.getScreenCTM().inverse());
             Stats.addHeatmapPoint(t.x, t.y);
-            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            dot.setAttribute("cx", t.x); dot.setAttribute("cy", t.y); dot.setAttribute("r", 4);
-            dot.setAttribute("fill", "#ffd700"); svg.appendChild(dot);
+            this.markerList.push({x:t.x, y:t.y});
+            if(this.markerList.length>3) this.markerList.shift();
+            BoardRenderer.render(this.handleHit.bind(this), "practice"===this.mode, this.markerList);
         }
         
         SFX.playThud();
+        if("league"===this.mode && this.state.dartsInTurn===0 && this.state.currentPlayer===2) return;
+        this.historyStack.push(JSON.parse(JSON.stringify(this.state)));
         
-        let pts = val;
-        if (type === "D") pts *= 2; if (type === "T") pts *= 3;
+        let n=val; if(type==="D") n*=2; if(type==="T") n*=3;
+        if(n===180) { const ov=document.getElementById("max-overlay"); ov.style.display="flex"; setTimeout(()=>ov.style.display="none", 1500); }
+        document.getElementById("status-msg").innerText=`Hit: ${type}${val}`;
+        this.state.throwLog.push(n); if(this.state.throwLog.length>3) this.state.throwLog.shift();
         
-        document.getElementById("status-msg").innerText = `Hit: ${type}${val}`;
-        
-        if (this.mode === "cricket") this.logicCricket(val, type);
-        else if (this.mode.includes("league") || this.mode === "pvp") this.logicX01(pts, type);
-        else if (this.mode === "bobs27") this.logicBobs(val, type);
-        else if (this.mode === "jdc") this.logicJDC(val, type);
+        if (this.mode==="cricket") this.logicCricket(val, type);
+        else if (this.mode==="rtc") this.logicRTC(val, type);
+        else if (this.mode.includes("league") || this.mode==="pvp") this.logicX01(n, type);
+        else if (this.mode==="bobs27") this.logicBobs(val, type);
+        else if (this.mode==="jdc") this.logicJDC(val, type);
+        else if (this.mode==="train_out") this.logicTrainer(n, type);
     },
+    
+    logicRTC: function(val, type) {
+        const target = this.state.rtcTarget;
+        const mode = this.settings.rtcMode;
+        let hit = false;
+        
+        if (target === 25) { if (val === 25) hit = (mode === 'S') || (mode === 'D' && type === 'D'); } 
+        else { if (val === target) { if (mode === 'S') hit = true; if (mode === 'D' && type === 'D') hit = true; if (mode === 'T' && type === 'T') hit = true; } }
+        
+        this.state.matchTotalDarts++; 
+        if (hit) {
+            Speaker.speak("Yes", 60);
+            this.state.rtcHits++;
+            if (this.state.rtcTarget === 20) this.state.rtcTarget = 25;
+            else if (this.state.rtcTarget === 25) { alert(`Finished! Accuracy: ${Math.round(21/this.state.matchTotalDarts*100)}%`); this.goHome(); return; }
+            else this.state.rtcTarget++;
+            
+            this.markerList = [];
+            BoardRenderer.render(this.handleHit.bind(this), false, this.markerList);
+            const prefix = mode === 'S' ? "" : mode;
+            document.getElementById("hud-val-2").innerText = this.state.rtcTarget === 25 ? "Bull" : prefix + this.state.rtcTarget;
+            document.getElementById("hud-val-1").innerText = this.state.rtcHits;
+        }
+    },
+    
+    logicTrainer: function(pts, type) {
+        if(this.state.dartsInTurn>=3) return;
+        this.state.dartsInTurn++;
+        const left = this.state.score - pts;
+        
+        if(left===0 && type==="D") {
+            Speaker.speak("Checkout!",100);
+            this.state.trainerAttempts++;
+            document.getElementById("hud-val-1").innerText = this.state.trainerAttempts;
+            setTimeout(()=>this.newTrainerTarget(), 1000);
+        } else if (left<=1 && left!==0) {
+            Speaker.speak("Bust",0);
+            this.state.score = this.state.startScore; // Reset securely
+            this.state.dartsInTurn=3;
+        } else {
+            this.state.score = left;
+            Speaker.speak(pts.toString(),0);
+        }
+        document.getElementById("checkout-display").innerText = Strategist.getCheckout(this.state.score);
+    },
+
     logicCricket: function(val, type) {
         if(this.state.dartsInTurn >= 3) return;
         this.state.dartsInTurn++;
-        
-        // Only 15-20 and Bull count
         if (val >= 15 || val === 25) {
-            const p = this.state.currentPlayer;
-            const op = p===1?2:1;
-            let hits = type==='T'?3 : type==='D'?2 : 1;
-            if(val===25) hits = type==='D'?2 : 1; // Bull Logic
-            
-            // Apply hits
+            const p = this.state.currentPlayer; const op = p===1?2:1;
+            let hits = type==='T'?3 : type==='D'?2 : 1; if(val===25) hits = type==='D'?2 : 1;
             while(hits > 0) {
-                if(this.state.cricket[p][val] < 3) {
-                    this.state.cricket[p][val]++;
-                    hits--;
-                } else {
-                    // Points?
+                if(this.state.cricket[p][val] < 3) { this.state.cricket[p][val]++; hits--; } 
+                else {
                     if(this.state.cricket[op][val] < 3) {
                         const pts = val===25?25:val;
-                        if(p===1) this.state.cricket.s1 += pts;
-                        else this.state.cricket.s2 += pts;
+                        if(p===1) this.state.cricket.s1 += pts; else this.state.cricket.s2 += pts;
                         Speaker.speak(String(pts), 0);
                     }
                     hits--;
@@ -481,55 +798,111 @@ const app = {
     },
     logicX01: function(pts, type, isManual) {
         if (!isManual && this.state.dartsInTurn >= 3) return;
-        if (!isManual) this.state.dartsInTurn++;
         
-        const cur = this.state.currentPlayer === 1 ? this.state.score : this.state.p2Score;
+        if(1 === this.state.currentPlayer) {
+            this.state.matchTotalDarts++; 
+            this.state.legDarts++;
+        }
+
+        if (!isManual) this.state.dartsInTurn++;
+        const cur = 1===this.state.currentPlayer?this.state.score:this.state.p2Score;
         const left = cur - pts;
         
-        const isDouble = (type === "D" || isManual);
-        if (left === 0 && isDouble) {
-            const pIdx = this.state.currentPlayer === 1 ? 0 : 1;
-            this.state.matchScore[pIdx]++;
-            Speaker.speak("Game Shot", 100);
-            if(isManual) { const d=prompt("Darts used?"); this.state.dartsInTurn=parseInt(d)||3; }
-            if (this.state.currentPlayer === 1) {
-                this.state.matchTotalScore += 501; this.state.matchTotalDarts += this.state.dartsInTurn;
-            }
-            this.checkMatchWin(); return;
+        if (1===this.state.currentPlayer && !isManual) {
+            const possible = Strategist.getCheckout(cur) !== "";
+            if (possible && type === "D" && left === 0) this.state.matchHitDoubles++;
+            else if (possible && left > 1 && cur%2==0 && cur<=40) this.state.matchMissedDoubles++;
         }
         
+        const isDouble = (type === "D" || isManual);
+        
+        // WIN CONDITION
+        if (left === 0 && isDouble) {
+            const pIdx = 1===this.state.currentPlayer ? 0 : 1;
+            this.state.matchScore[pIdx]++;
+            
+            if(1 === this.state.currentPlayer) {
+                this.state.matchTotalScore += pts; 
+                if(isManual) { 
+                    const d = prompt("Darts used in final turn?"); 
+                    const dInt = parseInt(d)||1;
+                    this.state.matchTotalDarts += (dInt - 1); 
+                    this.state.legDarts += (dInt - 1); 
+                }
+                Stats.updateRecords(this.state.legDarts, pts); 
+            }
+
+            Speaker.speak("Game Shot", 100);
+            this.checkMatchWin(); 
+            return;
+        }
+        
+        // BUST CONDITION
         if (left <= 1 && left !== 0) {
-            Speaker.speak("Bust!", 0); this.state.turnScore = 0; if (!isManual) this.state.dartsInTurn = 3;
-        } else {
-            if (this.state.currentPlayer === 1) this.state.score = left; else this.state.p2Score = left;
-            this.state.turnScore += pts; Speaker.speak(pts.toString(), pts);
+            Speaker.speak("Bust!", 0); 
+            if(1 === this.state.currentPlayer) {
+                this.state.matchTotalScore -= this.state.turnScore;
+            }
+            this.state.turnScore = 0; 
+            if (!isManual) this.state.dartsInTurn = 3;
+        } 
+        // NORMAL SCORING
+        else {
+            if (1===this.state.currentPlayer) {
+                this.state.score = left; 
+                this.state.matchTotalScore += pts; 
+            } else {
+                this.state.p2Score = left;
+            }
+            this.state.turnScore += pts; 
+            Speaker.speak(pts.toString(), pts);
         }
         this.updateUI();
     },
     checkMatchWin: function() {
-        if (this.state.matchScore[0] >= 3 || this.state.matchScore[1] >= 3) {
-            if (this.mode === "league" && this.state.matchScore[0] >= 3) {
-                const avg = this.state.matchTotalDarts > 0 ? (this.state.matchTotalScore / this.state.matchTotalDarts * 3).toFixed(1) : "0.0";
-                Stats.addMatch(avg, "W"); Stats.updateLeague(this.state.botIdx);
-            }
-            alert(`Match Over! ${this.state.matchScore[0]} - ${this.state.matchScore[1]}`); this.goHome();
+        const goal = Math.ceil(this.settings.legs / 2);
+        if (this.state.matchScore[0] >= goal || this.state.matchScore[1] >= goal) {
+            if (this.mode === "league" && this.state.matchScore[0] >= goal) Stats.updateLeague(this.state.botIdx);
+            
+            const avg = this.state.matchTotalDarts > 0 
+                ? (this.state.matchTotalScore / this.state.matchTotalDarts * 3).toFixed(1) 
+                : "0.0";
+                
+            Stats.addMatch(avg, this.state.matchScore[0] >= goal ? "W":"L", this.state.matchHitDoubles, this.state.matchMissedDoubles);
+            app.showReport(this.state.matchScore[0] >= goal, avg);
         } else { alert(`Leg Over. ${this.state.matchScore[0]} - ${this.state.matchScore[1]}`); this.resetLeg(); }
     },
     resetLeg: function() {
-        this.state.score = 501; this.state.p2Score = 501; this.state.dartsInTurn = 0; this.state.turnScore = 0;
-        // Cricket reset
+        this.state.score = this.state.startScore; this.state.p2Score = this.state.startScore;
+        this.state.dartsInTurn = 0; this.state.turnScore = 0;
+        this.state.legDarts = 0; 
         this.state.cricket = { 1: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, 2: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, s1:0, s2:0 };
+        this.markerList = [];
         BoardRenderer.render(this.handleHit.bind(this)); this.updateUI();
     },
     updateUI: function() {
+        if(this.mode==="train_out") {
+            document.getElementById("hud-val-1").innerText = this.state.trainerAttempts;
+            document.getElementById("hud-val-2").innerText = this.state.startScore;
+            document.getElementById("checkout-display").innerText = Strategist.getCheckout(this.state.score);
+            return;
+        }
         document.getElementById("hud-val-1").innerText = this.state.score;
         document.getElementById("hud-val-2").innerText = this.state.p2Score;
         document.getElementById("match-score-display").innerText = `${this.state.matchScore[0]} - ${this.state.matchScore[1]}`;
-        const p1 = document.getElementById("p1-box"), p2 = document.getElementById("p2-box");
-        if (this.state.currentPlayer === 1) { p1.classList.remove("inactive"); p2.classList.add("inactive"); }
-        else { p2.classList.remove("inactive"); p1.classList.add("inactive"); }
-        const hint = Strategist.getCheckout(this.state.currentPlayer === 1 ? this.state.score : this.state.p2Score);
+        
+        const p1 = document.getElementById("p1-box");
+        const p2 = document.getElementById("p2-box");
+        if(p1 && p2) {
+            if (this.state.currentPlayer === 1) { p1.classList.remove("inactive"); p2.classList.add("inactive"); }
+            else { p2.classList.remove("inactive"); p1.classList.add("inactive"); }
+        }
+        
+        const hint = Strategist.getCheckout(1 === this.state.currentPlayer ? this.state.score : this.state.p2Score);
         document.getElementById("checkout-display").innerText = hint;
+        
+        const meta1 = 1===this.state.currentPlayer ? this.state.throwLog.join(", ") : "";
+        document.getElementById("p1-meta").innerText = meta1;
     },
     logicBobs: function(val, type) {
         if (this.state.dartsInTurn >= 3) return;
@@ -559,6 +932,8 @@ const app = {
         if (this.state.dartsInTurn >= 3) {
             this.state.dartsInTurn = 0; this.state.jdcLevel++;
             document.getElementById("checkout-display").innerText = "Dart 1/3";
+            BoardRenderer.render(this.handleHit.bind(this)); // AUTO CLEAR
+            
             if (this.state.jdcLevel > 12) { alert("JDC Finished! Score: " + this.state.score); this.goHome(); return; }
             let txt = "";
             if (this.state.jdcLevel < 6) txt = "Double " + (10 + this.state.jdcLevel);
@@ -569,46 +944,51 @@ const app = {
         document.getElementById("hud-val-1").innerText = this.state.score;
     },
     handleAction: function() {
-        if(this.mode==="cricket" || this.mode==="pvp") {
-            if(this.state.dartsInTurn===0 && this.inputMode==="board") return;
-            this.state.currentPlayer = this.state.currentPlayer===1?2:1;
-            this.state.dartsInTurn=0; this.state.turnScore=0;
+        if(this.mode==="train_out") { this.newTrainerTarget(); return; }
+        if("cricket"===this.mode||"pvp"===this.mode){
+            if(0===this.state.dartsInTurn&&"board"===this.inputMode)return;
+            this.state.currentPlayer=1===this.state.currentPlayer?2:1;
+            this.state.dartsInTurn=0; this.state.turnScore=0; this.state.throwLog=[]; this.markerList=[];
             Speaker.speak("Player "+this.state.currentPlayer, 0);
             this.updateUI();
+            BoardRenderer.render(this.handleHit.bind(this));
         }
-        else if (this.mode === "league") {
-            if (this.state.dartsInTurn === 0 && this.inputMode === "board") return;
-            document.getElementById("status-msg").innerText = "Opponent throwing...";
-            const e = BOTS[this.state.botIdx];
-            setTimeout(() => {
-                const t = Math.floor(20 * Math.random()) - 10;
-                let o = e.avg + t;
-                if(this.state.p2Score - o <= 1) {
-                    if (Math.random() < e.checkout) { this.state.matchScore[1]++; this.checkMatchWin(); return; } else o = 0;
-                }
-                this.state.p2Score -= o;
-                Speaker.speak("Bot " + o, o);
-                this.updateUI();
-                this.state.dartsInTurn = 0; this.state.turnScore = 0;
-                document.getElementById("status-msg").innerText = "Your Turn";
-            }, 1000);
-        } else if (this.mode === "bobs27") {
-            if (this.state.turnScore === 0) {
-                const t = this.state.targetList[this.state.targetIndex];
-                const pen = t === 25 ? 25 : t * 2;
-                this.state.score -= pen;
-                Speaker.speak("Minus " + pen, 0);
+        else if ("league"===this.mode) {
+            if(0===this.state.dartsInTurn&&"board"===this.inputMode)return;
+            document.getElementById("status-msg").innerText="Opponent throwing...";
+            const e=BOTS[this.state.botIdx];
+            setTimeout((()=>{
+                const t=Math.floor(20*Math.random())-10; let o=e.avg+t;
+                if(this.state.p2Score-o<=1){if(Math.random()<e.checkout){this.state.matchScore[1]++;this.checkMatchWin();return}else o=0;}
+                this.state.p2Score-=o; Speaker.speak("Bot "+o,o); this.updateUI();
+                this.state.dartsInTurn=0; this.state.turnScore=0; this.state.throwLog=[]; this.markerList=[];
+                document.getElementById("status-msg").innerText="Your Turn";
+                BoardRenderer.render(this.handleHit.bind(this));
+            }),1e3);
+        } else if ("bobs27"===this.mode) {
+            if(0===this.state.turnScore){
+                const t=this.state.targetList[this.state.targetIndex]; const pen=t===25?25:t*2;
+                this.state.score-=pen; Speaker.speak("Minus "+pen,0);
             }
-            if (this.state.score < 0) { alert("BUST!"); this.goHome(); return; }
+            if(this.state.score<0){alert("BUST!");this.goHome();return}
             this.state.targetIndex++;
-            if (this.state.targetIndex >= this.state.targetList.length) { alert("Finished! Score: " + this.state.score); this.goHome(); return; }
-            const next = this.state.targetList[this.state.targetIndex];
-            document.getElementById("hud-val-1").innerText = this.state.score;
-            document.getElementById("hud-val-2").innerText = next === 25 ? "Bull" : "D" + next;
-            this.state.dartsInTurn = 0; this.state.turnScore = 0;
+            if(this.state.targetIndex>=this.state.targetList.length){alert("Finished! Score: "+this.state.score);this.goHome();return}
+            const next=this.state.targetList[this.state.targetIndex];
+            document.getElementById("hud-val-1").innerText=this.state.score;
+            document.getElementById("hud-val-2").innerText=next===25?"Bull":"D"+next;
+            this.state.dartsInTurn=0; this.state.turnScore=0; this.markerList=[];
+            BoardRenderer.render(this.handleHit.bind(this));
         }
     },
-    undo: function() { alert("Undo disabled in Pro Mode"); }
+    undo: function() {
+        if(this.historyStack.length>0) {
+            this.state = this.historyStack.pop();
+            this.markerList.pop();
+            this.updateUI();
+            BoardRenderer.render(this.handleHit.bind(this), false, this.markerList);
+            if(this.mode==="cricket") this.renderCricketBoard();
+        }
+    }
 };
 
 Voice.init(); Stats.load();
