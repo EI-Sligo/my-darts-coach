@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>DartsOS v16.6: Compact Cricket</title>
+    <title>DartsOS v17.0: Tournament & Pro Stats</title>
     <style>
         :root {
             --bg: #121212; --panel: #1e1e1e; --primary: #00e676; --secondary: #2979ff; --danger: #ff1744;
@@ -77,10 +77,15 @@
         .modal-card { background: var(--panel); padding: 30px; border-radius: 12px; text-align: center; width: 100%; max-width: 400px; border: 1px solid #333; }
         .modal-row { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
         select { background: #333; color: white; padding: 10px; border: 1px solid #555; border-radius: 6px; font-size: 1.1rem; width: 150px; }
+        
+        /* PRO STATS GRID */
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
         .stat-item { background: #222; padding: 10px; border-radius: 6px; }
         .stat-val { color: var(--primary); font-size: 1.5rem; font-weight: bold; display: block; }
         .stat-lbl { color: #888; font-size: 0.8rem; }
+        .stat-row { display:flex; justify-content: space-between; margin-bottom: 5px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .stat-row span { font-size: 0.9rem; }
+        .stat-row strong { color: var(--highlight); }
 
         /* HISTORY LIST */
         .history-list { text-align: left; max-height: 400px; overflow-y: auto; margin-bottom: 20px; }
@@ -155,28 +160,37 @@
 </div>
 
 <div id="report-modal">
-    <div class="modal-card">
+    <div class="modal-card" style="max-width:450px;">
         <h2>Match Report</h2>
-        <h3 id="report-result" style="color:var(--primary)">WINNER</h3>
+        <h3 id="report-result" style="color:var(--primary); font-size: 2rem; margin: 10px 0;">VICTORY</h3>
+        <p id="tourney-msg" style="color:#aaa; font-style:italic; margin-bottom:15px; display:none;">Tournament Round 1 Complete</p>
+        
         <div class="stat-grid">
             <div class="stat-item">
                 <span class="stat-val" id="rep-avg">0.0</span>
                 <span class="stat-lbl">3-Dart Avg</span>
             </div>
             <div class="stat-item">
-                <span class="stat-val" id="rep-doubles">0%</span>
-                <span class="stat-lbl">Checkout Rate</span>
+                <span class="stat-val" id="rep-first9">0.0</span>
+                <span class="stat-lbl">First 9 Avg</span>
             </div>
             <div class="stat-item">
-                <span class="stat-val" id="rep-best">--</span>
-                <span class="stat-lbl">Best Leg (Darts)</span>
+                <span class="stat-val" id="rep-doubles">0%</span>
+                <span class="stat-lbl">Checkout</span>
             </div>
             <div class="stat-item">
                 <span class="stat-val" id="rep-score">0-0</span>
-                <span class="stat-lbl">Final Score</span>
+                <span class="stat-lbl">Score</span>
             </div>
         </div>
-        <button class="btn btn-primary" onclick="app.closeReport()">Main Menu</button>
+        
+        <div style="background:#222; padding:15px; border-radius:8px; text-align:left; margin-bottom:20px;">
+            <div class="stat-row"><span>Tons (100+)</span><strong id="rep-100">0</strong></div>
+            <div class="stat-row"><span>Super Tons (140+)</span><strong id="rep-140">0</strong></div>
+            <div class="stat-row" style="border:none"><span>Maximums (180)</span><strong id="rep-180" style="color:var(--highlight)">0</strong></div>
+        </div>
+
+        <button class="btn btn-primary" id="btn-report-next" onclick="app.closeReport()">Main Menu</button>
     </div>
 </div>
 
@@ -202,7 +216,7 @@
 
 <div id="screen-menu" class="screen active">
     <header>
-        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v16.6</span></h1>
+        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v17.0</span></h1>
         <div style="display:flex; gap:10px;">
             <div class="icon-btn" onclick="Coach.analyze()">🎓</div>
             <div id="settings-btn" class="icon-btn" onclick="Stats.showHistory()">📊</div>
@@ -217,11 +231,15 @@
         
         <h2 style="margin-top: 20px;">Game Modes</h2>
         <div class="menu-grid">
+            <div class="menu-card" style="grid-column: span 2; background: linear-gradient(135deg, #1e1e1e, #2c1e1e); border-color: var(--highlight);" onclick="app.startTournament()">
+                <span style="font-size:2rem">🏆</span><br><b style="color:var(--highlight)">TOURNAMENT</b><br><span style="font-size:0.8rem; color:#aaa">Win the Cup</span>
+            </div>
+            
             <div class="menu-card" onclick="app.openSetup('league')">
-                <span class="rank-badge" id="league-rank">ROOKIE</span><span style="font-size:2rem">🏆</span><br><b>Bot League</b><br><span style="font-size:0.8rem; color:#888">X01 Match Play</span>
+                <span class="rank-badge" id="league-rank">ROOKIE</span><span style="font-size:2rem">🏅</span><br><b>Bot League</b><br><span style="font-size:0.8rem; color:#888">Single Match</span>
             </div>
             <div class="menu-card" onclick="app.openSetup('rtc')">
-                <span style="font-size:2rem">⏰</span><br><b>Round The Clock</b><br><span style="font-size:0.8rem; color:#888">1-20 Accuracy Drill</span>
+                <span style="font-size:2rem">⏰</span><br><b>Round The Clock</b><br><span style="font-size:0.8rem; color:#888">Accuracy Drill</span>
             </div>
             <div class="menu-card" onclick="app.loadMode('cricket')">
                 <span style="font-size:2rem">🦗</span><br><b>Cricket</b><br><span style="font-size:0.8rem; color:#888">Tactical Attack</span>
@@ -231,9 +249,6 @@
             </div>
             <div class="menu-card" onclick="app.loadMode('bobs27')">
                 <span style="font-size:2rem">☠️</span><br><b>Bob's 27</b><br><span style="font-size:0.8rem; color:#888">Doubles Practice</span>
-            </div>
-            <div class="menu-card" onclick="app.loadMode('train_out')">
-                <span style="font-size:2rem">🎯</span><br><b>Checkout Trainer</b><br><span style="font-size:0.8rem; color:#888">Pressure Practice</span>
             </div>
             <div class="menu-card" onclick="app.openSetup('pvp')">
                 <span style="font-size:2rem">👥</span><br><b>Vs Player</b><br><span style="font-size:0.8rem; color:#888">Pass & Play</span>
@@ -408,7 +423,6 @@ const Coach = {
             return;
         }
 
-        // 1. Calculate Mechanics (Heatmap Drift)
         let driftMsg = "Your grouping is centered.";
         if(heat.length > 10) {
             let sumX = 0;
@@ -418,7 +432,6 @@ const Coach = {
             if(avgX > 260) driftMsg = "You are drifting right (into the 1s). You might be snatching the dart upon release.";
         }
 
-        // 2. Calculate Stats
         const last5 = m.slice(-5);
         const avg = last5.reduce((a,b)=>a+b.avg,0)/last5.length;
         const wins = last5.filter(x=>x.result==="W").length;
@@ -427,7 +440,6 @@ const Coach = {
         last5.forEach(x => { if(x.checkoutPerc > 0) { doubleSum+=x.checkoutPerc; doubleCount++; } });
         const dblPerc = doubleCount > 0 ? doubleSum/doubleCount : 0;
 
-        // 3. Generate Advice
         let advice = "";
         let rec = "";
 
@@ -462,12 +474,7 @@ const Stats = {
             const e = localStorage.getItem("darts_v16");
             if (e) this.data = JSON.parse(e);
             if(!this.data.userName || this.data.userName === "undefined") this.data.userName = "YOU";
-            
-            if (this.data.bestLeg < 6) { 
-                this.data.bestLeg = 999; 
-                this.save();
-            }
-            
+            if (this.data.bestLeg < 6) { this.data.bestLeg = 999; this.save(); }
         } catch(e) {}
         this.renderChart(); this.updateBadges();
     },
@@ -574,15 +581,20 @@ const BoardRenderer = {
 // --- APP ---
 const app = {
     mode: null, state: {}, inputMode: "board", numpadBuffer: "", settings: { score: 501, legs: 3, rtcMode: 'S', botIdx: 0 }, historyStack: [], markerList: [],
+    // NEW TOURNAMENT STATE
+    tournament: { active: false, round: 0 },
     
     goHome: function() {
         document.getElementById("screen-game").classList.remove("active");
         document.getElementById("screen-menu").classList.add("active");
         document.getElementById("report-modal").style.display = "none";
+        // Reset Tourney if exiting mid-game
+        this.tournament.active = false;
         Stats.load();
     },
     openSetup: function(mode) {
         this.mode = mode;
+        this.tournament.active = false; // Reset tourney flag if regular setup is opened
         document.getElementById("setup-modal").style.display = "flex";
         document.getElementById("setup-title").innerText = mode === "rtc" ? "Round The Clock" : "Match Setup";
         document.getElementById("setup-league").style.display = mode === "rtc" ? "none" : "block";
@@ -605,6 +617,25 @@ const app = {
             botRow.style.display = "none";
         }
     },
+    // NEW: START TOURNAMENT
+    startTournament: function() {
+        this.tournament = { active: true, round: 1 };
+        this.mode = "league";
+        this.settings.legs = 3; // Fixed format
+        this.settings.score = 501;
+        this.launchTournamentMatch();
+    },
+    launchTournamentMatch: function() {
+        // Round 1: Easy (0 or 1), Round 2: Medium (2 or 3), Round 3: Iceman (4)
+        let botIndex = 0;
+        if (this.tournament.round === 1) botIndex = 0;
+        else if (this.tournament.round === 2) botIndex = 2;
+        else botIndex = 4;
+        
+        this.settings.botIdx = botIndex;
+        this.loadMode("league");
+    },
+    
     closeSetup: function() { document.getElementById("setup-modal").style.display = "none"; },
     confirmSetup: function() {
         this.settings.score = parseInt(document.getElementById("set-score").value);
@@ -616,14 +647,65 @@ const app = {
     },
     showReport: function(won, avg) {
         const r = document.getElementById("report-modal"); r.style.display = "flex";
-        document.getElementById("report-result").innerText = won ? "VICTORY" : "DEFEAT";
-        document.getElementById("report-result").style.color = won ? "var(--primary)" : "var(--danger)";
+        const resTitle = document.getElementById("report-result");
+        const msg = document.getElementById("tourney-msg");
+        const btn = document.getElementById("btn-report-next");
+
+        // PRO STATS CALCULATIONS
         document.getElementById("rep-avg").innerText = avg;
         document.getElementById("rep-best").innerText = Stats.data.bestLeg === 999 ? "--" : Stats.data.bestLeg;
         const miss = this.state.matchMissedDoubles || 0; const hits = this.state.matchHitDoubles || 0;
         const rate = hits + miss > 0 ? Math.round((hits / (hits+miss))*100) + "%" : "--";
         document.getElementById("rep-doubles").innerText = rate;
         document.getElementById("rep-score").innerText = `${this.state.matchScore[0]} - ${this.state.matchScore[1]}`;
+        
+        // NEW STATS
+        document.getElementById("rep-100").innerText = this.state.stats.tons;
+        document.getElementById("rep-140").innerText = this.state.stats.superTons;
+        document.getElementById("rep-180").innerText = this.state.stats.maxes;
+        
+        // First 9 Avg
+        const f9 = this.state.stats.first9Darts > 0 
+            ? ((this.state.stats.first9Score / this.state.stats.first9Darts) * 3).toFixed(1) 
+            : "0.0";
+        document.getElementById("rep-first9").innerText = f9;
+
+        // TOURNAMENT LOGIC
+        if (this.tournament.active) {
+            msg.style.display = "block";
+            if (won) {
+                if (this.tournament.round === 3) {
+                    resTitle.innerText = "CHAMPION!";
+                    resTitle.style.color = "gold";
+                    msg.innerText = "You won the DartsOS Cup!";
+                    btn.innerText = "Claim Trophy";
+                    btn.onclick = () => { this.tournament.active = false; this.closeReport(); };
+                } else {
+                    resTitle.innerText = "ROUND " + this.tournament.round + " CLEAR";
+                    resTitle.style.color = "var(--primary)";
+                    msg.innerText = "Advancing to next round...";
+                    btn.innerText = "Next Match";
+                    btn.onclick = () => { 
+                        this.tournament.round++; 
+                        document.getElementById("report-modal").style.display="none"; 
+                        this.launchTournamentMatch(); 
+                    };
+                }
+            } else {
+                resTitle.innerText = "ELIMINATED";
+                resTitle.style.color = "var(--danger)";
+                msg.innerText = "Better luck next time.";
+                btn.innerText = "Main Menu";
+                btn.onclick = () => { this.tournament.active = false; this.closeReport(); };
+            }
+        } else {
+            // REGULAR MODE
+            msg.style.display = "none";
+            resTitle.innerText = won ? "VICTORY" : "DEFEAT";
+            resTitle.style.color = won ? "var(--primary)" : "var(--danger)";
+            btn.innerText = "Main Menu";
+            btn.onclick = () => { this.closeReport(); };
+        }
     },
     closeReport: function() { document.getElementById("report-modal").style.display = "none"; this.goHome(); },
     renameUser: function() {
@@ -640,8 +722,8 @@ const app = {
         }
     },
     numpadAdd: function(e) { 
-        if((this.numpadBuffer + e).length > 3) return; // Limit length
-        if(parseInt(this.numpadBuffer + e) > 180) return; // Limit value
+        if((this.numpadBuffer + e).length > 3) return; 
+        if(parseInt(this.numpadBuffer + e) > 180) return; 
         this.numpadBuffer += e; 
         document.getElementById("status-msg").innerText = "Score: " + this.numpadBuffer; 
     },
@@ -660,6 +742,9 @@ const app = {
             legDarts: 0,
             matchScore: [0, 0], matchTotalScore: 0, matchTotalDarts: 0,
             matchMissedDoubles: 0, matchHitDoubles: 0,
+            // NEW STATS COUNTERS
+            stats: { tons: 0, superTons: 0, maxes: 0, first9Score: 0, first9Darts: 0 },
+            
             targetList: [], targetIndex: 0, jdcLevel: 0, jdcScore: 0, rtcTarget: 1, rtcHits: 0,
             cricket: { 1: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, 2: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, s1:0, s2:0 },
             throwLog: [], trainerTarget: 0, trainerAttempts: 0
@@ -670,10 +755,7 @@ const app = {
         document.getElementById("screen-game").classList.add("active");
         
         BoardRenderer.render(this.handleHit.bind(this), "practice" === e);
-        
-        // RESET HUD VISIBILITY
         document.getElementById("main-hud").style.display = "flex";
-        
         document.getElementById("p2-box").style.visibility = "hidden";
         document.getElementById("match-score-display").style.visibility = "hidden";
         document.getElementById("cricket-board").style.display = "none";
@@ -695,7 +777,11 @@ const app = {
     setupLeague: function() {
         const i = this.settings.botIdx !== undefined ? this.settings.botIdx : Math.min(4, Stats.data.leagueRank);
         this.state.botIdx = i;
-        document.getElementById("game-title").innerText = `Vs ${BOTS[i].name}`;
+        
+        let title = `Vs ${BOTS[i].name}`;
+        if(this.tournament.active) title = `Round ${this.tournament.round}: Vs ${BOTS[i].name}`;
+        
+        document.getElementById("game-title").innerText = title;
         document.getElementById("p2-box").style.visibility = "visible";
         document.getElementById("match-score-display").style.visibility = "visible";
         this.updateUI();
@@ -711,16 +797,12 @@ const app = {
     },
     setupCricket: function() {
         document.getElementById("game-title").innerText = "Cricket (PvP)";
-        
-        // HIDE THE MAIN HUD TO SAVE SPACE
         document.getElementById("main-hud").style.display = "none";
-        
         document.getElementById("cricket-board").style.display = "block";
         this.renderCricketBoard();
     },
     renderCricketBoard: function() {
         const t = document.getElementById("cricket-board");
-        // Integrated Scores into Header
         const s1 = this.state.cricket.s1;
         const s2 = this.state.cricket.s2;
         t.innerHTML = `<div class="crick-row crick-header"><div class="crick-mk">${Stats.data.userName} (${s1})</div><div class="crick-num">#</div><div class="crick-mk">P2 (${s2})</div></div>`;
@@ -769,7 +851,7 @@ const app = {
     },
     newTrainerTarget: function() {
         this.state.score = Math.floor(Math.random()*60)+61; 
-        this.state.startScore = this.state.score; // Save target for reset
+        this.state.startScore = this.state.score; 
         this.state.turnScore = 0; 
         this.state.dartsInTurn = 0; 
         this.markerList = []; 
@@ -869,15 +951,22 @@ const app = {
                 }
             }
             this.renderCricketBoard();
-            // HUD is hidden, score is in the table header now
         }
     },
+    
+    // --- UPDATED X01 LOGIC FOR PRO STATS ---
     logicX01: function(pts, type, isManual) {
         if (!isManual && this.state.dartsInTurn >= 3) return;
         
         if(1 === this.state.currentPlayer) {
             this.state.matchTotalDarts++; 
             this.state.legDarts++;
+            
+            // TRACK FIRST 9 AVG
+            if (this.state.legDarts <= 9) {
+                this.state.stats.first9Score += pts;
+                this.state.stats.first9Darts++;
+            }
         }
 
         if (!isManual) this.state.dartsInTurn++;
@@ -899,6 +988,13 @@ const app = {
             
             if(1 === this.state.currentPlayer) {
                 this.state.matchTotalScore += pts; 
+                this.state.turnScore += pts; // Finish the turn count
+                
+                // Check stats for the final turn
+                if(this.state.turnScore >= 100 && this.state.turnScore < 140) this.state.stats.tons++;
+                else if(this.state.turnScore >= 140 && this.state.turnScore < 180) this.state.stats.superTons++;
+                else if(this.state.turnScore === 180) this.state.stats.maxes++;
+
                 if(isManual) { 
                     const d = prompt("Darts used in final turn?"); 
                     const dInt = parseInt(d)||1;
@@ -917,7 +1013,7 @@ const app = {
         if (left <= 1 && left !== 0) {
             Speaker.speak("Bust!", 0); 
             if(1 === this.state.currentPlayer) {
-                this.state.matchTotalScore -= this.state.turnScore;
+                this.state.matchTotalScore -= this.state.turnScore; // Undo points
             }
             this.state.turnScore = 0; 
             if (!isManual) this.state.dartsInTurn = 3;
@@ -932,6 +1028,13 @@ const app = {
             }
             this.state.turnScore += pts; 
             Speaker.speak(pts.toString(), pts);
+            
+            // CHECK FOR TURN END (STATS)
+            if(1 === this.state.currentPlayer && (this.state.dartsInTurn === 3 || isManual)) {
+                if(this.state.turnScore >= 100 && this.state.turnScore < 140) this.state.stats.tons++;
+                else if(this.state.turnScore >= 140 && this.state.turnScore < 180) this.state.stats.superTons++;
+                else if(this.state.turnScore === 180) this.state.stats.maxes++;
+            }
         }
         this.updateUI();
     },
@@ -1031,6 +1134,14 @@ const app = {
         }
         else if ("league"===this.mode) {
             if(0===this.state.dartsInTurn&&"board"===this.inputMode)return;
+            
+            // TRACK STATS ON TURN CHANGE
+            if(1 === this.state.currentPlayer) {
+                if(this.state.turnScore >= 100 && this.state.turnScore < 140) this.state.stats.tons++;
+                else if(this.state.turnScore >= 140 && this.state.turnScore < 180) this.state.stats.superTons++;
+                else if(this.state.turnScore === 180) this.state.stats.maxes++;
+            }
+            
             document.getElementById("status-msg").innerText="Opponent throwing...";
             const e=BOTS[this.state.botIdx];
             setTimeout((()=>{
