@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>DartsOS v16.4: Select Bot</title>
+    <title>DartsOS v16.6: Compact Cricket</title>
     <style>
         :root {
             --bg: #121212; --panel: #1e1e1e; --primary: #00e676; --secondary: #2979ff; --danger: #ff1744;
@@ -33,7 +33,7 @@
         
         .chart-container { width: 100%; max-width: 600px; height: 150px; background: #222; border-radius: 12px; margin-top: 10px; position: relative; border: 1px solid #333; }
         
-        .hud-panel { width: 100%; max-width: 600px; background: var(--panel); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-start; flex-shrink: 0; }
+        .hud-panel { width: 100%; max-width: 600px; background: var(--panel); border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-start; flex-shrink: 0; transition: all 0.3s; }
         .hud-score-box { text-align: center; flex: 1; transition: opacity 0.3s; cursor: pointer; }
         .hud-score-box.inactive { opacity: 0.4; }
         .hud-score { font-size: 2.5rem; font-weight: bold; color: var(--primary); line-height: 1; }
@@ -63,8 +63,13 @@
         .btn-miss { background: #424242; color: #ff5252; border: 1px solid #ff5252; flex: 0.4; }
         .rank-badge { background: var(--highlight); color: black; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; position: absolute; top: 10px; right: 10px; }
         
+        /* COACH UI */
+        .coach-avatar { font-size: 3rem; margin-bottom: 10px; }
+        .coach-msg { font-size: 1.1rem; color: #fff; line-height: 1.5; margin-bottom: 20px; text-align: left; background: #222; padding: 15px; border-radius: 8px; border-left: 4px solid var(--primary); }
+        .coach-rec { font-weight: bold; color: var(--highlight); display: block; margin-top: 10px; font-size: 0.9rem; }
+
         /* OVERLAYS */
-        #setup-modal, #report-modal, #history-modal { 
+        #setup-modal, #report-modal, #history-modal, #coach-modal { 
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; 
             overflow-y: auto; padding: 20px; box-sizing: border-box;
@@ -85,13 +90,13 @@
         .hist-date { font-size: 0.8rem; color: #666; display: block; }
         .hist-details { font-size: 0.9rem; color: white; }
 
-        /* CRICKET UI */
+        /* CRICKET UI - COMPACT */
         #cricket-board { display: none; width: 100%; max-width: 450px; margin-bottom: 10px; background: #222; border-radius: 8px; overflow: hidden; }
         .crick-row { display: flex; border-bottom: 1px solid #333; height: 35px; align-items: center; }
         .crick-num { flex: 1; text-align: center; font-weight: bold; color: #aaa; background: #2a2a2a; height: 100%; display: flex; align-items: center; justify-content: center; border-left: 1px solid #333; border-right: 1px solid #333; }
         .crick-mk { flex: 2; text-align: center; color: white; font-weight: bold; font-family: monospace; font-size: 1.2rem; }
         .crick-mk.closed { color: #555; }
-        .crick-header { background: #333; color: var(--highlight); font-size: 0.8rem; height: 25px; }
+        .crick-header { background: #333; color: var(--highlight); font-size: 0.8rem; height: 30px; }
 
         /* 180 ANIMATION */
         #max-overlay {
@@ -175,6 +180,17 @@
     </div>
 </div>
 
+<div id="coach-modal">
+    <div class="modal-card">
+        <div class="coach-avatar">🎓</div>
+        <h2>Coach's Analysis</h2>
+        <div id="coach-content" class="coach-msg">
+            Loading analysis...
+        </div>
+        <button class="btn btn-primary" onclick="document.getElementById('coach-modal').style.display='none'">Thanks Coach</button>
+    </div>
+</div>
+
 <div id="history-modal">
     <div class="modal-card" style="max-width: 500px;">
         <h2>Career History</h2>
@@ -186,8 +202,9 @@
 
 <div id="screen-menu" class="screen active">
     <header>
-        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v16.4</span></h1>
+        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v16.6</span></h1>
         <div style="display:flex; gap:10px;">
+            <div class="icon-btn" onclick="Coach.analyze()">🎓</div>
             <div id="settings-btn" class="icon-btn" onclick="Stats.showHistory()">📊</div>
         </div>
     </header>
@@ -238,7 +255,8 @@
     </header>
     <div class="main-area">
         <div id="max-overlay"><div class="max-text">180!</div></div>
-        <div class="hud-panel">
+        
+        <div class="hud-panel" id="main-hud">
             <div class="hud-score-box" id="p1-box" onclick="app.renameUser()">
                 <div class="hud-label" id="hud-lbl-1">YOU</div>
                 <div class="hud-score" id="hud-val-1">501</div>
@@ -377,7 +395,66 @@ const Voice = {
     }
 };
 
-// --- STATS (WITH SANITY CHECK) ---
+// --- COACH LOGIC ---
+const Coach = {
+    analyze: function() {
+        const m = Stats.data.matches;
+        const heat = Stats.data.heatmap;
+        const box = document.getElementById("coach-content");
+        document.getElementById("coach-modal").style.display = "flex";
+
+        if(m.length < 3) {
+            box.innerHTML = "I need more data! Play at least 3 matches so I can analyze your throw.";
+            return;
+        }
+
+        // 1. Calculate Mechanics (Heatmap Drift)
+        let driftMsg = "Your grouping is centered.";
+        if(heat.length > 10) {
+            let sumX = 0;
+            heat.forEach(p => sumX += p.x);
+            const avgX = sumX / heat.length;
+            if(avgX < 240) driftMsg = "You are drifting left (into the 5s). Check your elbow is vertical and not flaring out.";
+            if(avgX > 260) driftMsg = "You are drifting right (into the 1s). You might be snatching the dart upon release.";
+        }
+
+        // 2. Calculate Stats
+        const last5 = m.slice(-5);
+        const avg = last5.reduce((a,b)=>a+b.avg,0)/last5.length;
+        const wins = last5.filter(x=>x.result==="W").length;
+        
+        let doubleSum = 0, doubleCount = 0;
+        last5.forEach(x => { if(x.checkoutPerc > 0) { doubleSum+=x.checkoutPerc; doubleCount++; } });
+        const dblPerc = doubleCount > 0 ? doubleSum/doubleCount : 0;
+
+        // 3. Generate Advice
+        let advice = "";
+        let rec = "";
+
+        if(dblPerc < 15) {
+            advice = "Your scoring is okay, but missed doubles are killing your game.";
+            rec = "RECOMMENDATION: Play 'Bob's 27' twice daily until you can finish with a positive score.";
+        } else if (avg < 40) {
+            advice = "We need to build your scoring consistency. You're hitting too many low numbers.";
+            rec = "RECOMMENDATION: Play 'Round The Clock' (Singles) to build muscle memory around the board.";
+        } else if (wins === 0) {
+            advice = "You're on a losing streak. It happens. You might be playing bots that are too hard.";
+            rec = "RECOMMENDATION: Drop the Bot Level down one notch to rebuild confidence.";
+        } else {
+            advice = "You are playing well! Consistency is high.";
+            rec = "RECOMMENDATION: Try the 'JDC Academy' routine to test yourself against pro standards.";
+        }
+
+        box.innerHTML = `
+            <b>Recent Form (Last 5):</b> Avg ${avg.toFixed(1)} | Doubles ${Math.round(dblPerc)}%<br><br>
+            ${driftMsg}<br><br>
+            ${advice}
+            <span class="coach-rec">${rec}</span>
+        `;
+    }
+};
+
+// --- STATS ---
 const Stats = {
     data: { matches: [], leagueRank: 0, drillLevel: 0, heatmap: [], userName: "YOU", bestLeg: 999, highOut: 0 },
     load: function() {
@@ -386,13 +463,10 @@ const Stats = {
             if (e) this.data = JSON.parse(e);
             if(!this.data.userName || this.data.userName === "undefined") this.data.userName = "YOU";
             
-            // --- SANITY CHECK ---
             if (this.data.bestLeg < 6) { 
-                console.log("Fixing corrupted best leg record.");
                 this.data.bestLeg = 999; 
                 this.save();
             }
-            // --------------------
             
         } catch(e) {}
         this.renderChart(); this.updateBadges();
@@ -400,7 +474,6 @@ const Stats = {
     save: function() { localStorage.setItem("darts_v16", JSON.stringify(this.data)) },
     setName: function(n) { this.data.userName = n; this.save(); },
     addMatch: function(avg, res, doubles = 0, missed = 0) {
-        // Use currently selected bot for opponent name
         const opponent = app.mode === "league" && app.settings.botIdx !== undefined ? BOTS[app.settings.botIdx].name : "Player 2";
         this.data.matches.push({ 
             date: new Date().toLocaleDateString(), avg: parseFloat(avg), result: res, 
@@ -515,7 +588,6 @@ const app = {
         document.getElementById("setup-league").style.display = mode === "rtc" ? "none" : "block";
         document.getElementById("setup-rtc").style.display = mode === "rtc" ? "block" : "none";
         
-        // --- NEW: Bot Selector ---
         const botSelect = document.getElementById("set-bot-level");
         const botRow = document.getElementById("row-opponent");
         
@@ -526,7 +598,6 @@ const app = {
                 const opt = document.createElement("option");
                 opt.value = i;
                 opt.innerText = b.name;
-                // Default to current rank
                 if (i === Math.min(4, Stats.data.leagueRank)) opt.selected = true;
                 botSelect.appendChild(opt);
             });
@@ -539,7 +610,7 @@ const app = {
         this.settings.score = parseInt(document.getElementById("set-score").value);
         this.settings.legs = parseInt(document.getElementById("set-legs").value);
         this.settings.rtcMode = document.getElementById("set-rtc-mode").value;
-        this.settings.botIdx = parseInt(document.getElementById("set-bot-level").value); // Store manual bot selection
+        this.settings.botIdx = parseInt(document.getElementById("set-bot-level").value); 
         this.closeSetup();
         this.loadMode(this.mode);
     },
@@ -599,6 +670,10 @@ const app = {
         document.getElementById("screen-game").classList.add("active");
         
         BoardRenderer.render(this.handleHit.bind(this), "practice" === e);
+        
+        // RESET HUD VISIBILITY
+        document.getElementById("main-hud").style.display = "flex";
+        
         document.getElementById("p2-box").style.visibility = "hidden";
         document.getElementById("match-score-display").style.visibility = "hidden";
         document.getElementById("cricket-board").style.display = "none";
@@ -618,7 +693,6 @@ const app = {
         else document.getElementById("game-title").innerText = "Analysis";
     },
     setupLeague: function() {
-        // --- NEW: Use manual selection if available, else default to rank ---
         const i = this.settings.botIdx !== undefined ? this.settings.botIdx : Math.min(4, Stats.data.leagueRank);
         this.state.botIdx = i;
         document.getElementById("game-title").innerText = `Vs ${BOTS[i].name}`;
@@ -637,16 +711,19 @@ const app = {
     },
     setupCricket: function() {
         document.getElementById("game-title").innerText = "Cricket (PvP)";
-        document.getElementById("hud-val-1").innerText = "0";
-        document.getElementById("hud-val-2").innerText = "0";
-        document.getElementById("p2-box").style.visibility = "visible";
-        document.getElementById("hud-lbl-2").innerText = "P2";
+        
+        // HIDE THE MAIN HUD TO SAVE SPACE
+        document.getElementById("main-hud").style.display = "none";
+        
         document.getElementById("cricket-board").style.display = "block";
         this.renderCricketBoard();
     },
     renderCricketBoard: function() {
         const t = document.getElementById("cricket-board");
-        t.innerHTML = `<div class="crick-row crick-header"><div class="crick-mk">${Stats.data.userName}</div><div class="crick-num">#</div><div class="crick-mk">P2</div></div>`;
+        // Integrated Scores into Header
+        const s1 = this.state.cricket.s1;
+        const s2 = this.state.cricket.s2;
+        t.innerHTML = `<div class="crick-row crick-header"><div class="crick-mk">${Stats.data.userName} (${s1})</div><div class="crick-num">#</div><div class="crick-mk">P2 (${s2})</div></div>`;
         [20,19,18,17,16,15,25].forEach(n => {
             const m1 = this.getMark(this.state.cricket[1][n]);
             const m2 = this.getMark(this.state.cricket[2][n]);
@@ -792,8 +869,7 @@ const app = {
                 }
             }
             this.renderCricketBoard();
-            document.getElementById("hud-val-1").innerText = this.state.cricket.s1;
-            document.getElementById("hud-val-2").innerText = this.state.cricket.s2;
+            // HUD is hidden, score is in the table header now
         }
     },
     logicX01: function(pts, type, isManual) {
