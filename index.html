@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>DartsOS v20.1: Legend Edition (Fixed)</title>
+    <title>DartsOS v21.0: Premier League & Ghosts</title>
     <style>
         :root {
             --bg: #121212; --panel: #1e1e1e; --primary: #00e676; --secondary: #2979ff; --danger: #ff1744;
@@ -71,10 +71,10 @@
         .btn-miss { background: #424242; color: #ff5252; border: 1px solid #ff5252; flex: 0.4; }
         .rank-badge { background: var(--highlight); color: black; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; position: absolute; top: 10px; right: 10px; }
         
-        #setup-modal, #report-modal, #stats-modal, #coach-modal, #settings-modal, #scenario-modal, #players-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; overflow-y: auto; padding: 20px; box-sizing: border-box; }
+        #setup-modal, #report-modal, #stats-modal, #coach-modal, #settings-modal, #scenario-modal, #players-modal, #pl-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; overflow-y: auto; padding: 20px; box-sizing: border-box; }
         .modal-card { background: var(--panel); padding: 30px; border-radius: 12px; text-align: center; width: 100%; max-width: 500px; border: 1px solid #333; }
         .modal-row { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
-        select, input[type="text"] { background: #333; color: white; padding: 10px; border: 1px solid #555; border-radius: 6px; font-size: 1.1rem; width: 150px; }
+        select, input[type="text"], textarea { background: #333; color: white; padding: 10px; border: 1px solid #555; border-radius: 6px; font-size: 1.1rem; width: 100%; box-sizing: border-box; }
         
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
         .stat-item { background: #222; padding: 10px; border-radius: 6px; }
@@ -116,6 +116,12 @@
         .scen-desc { color:#aaa; font-size:0.9rem; }
         
         .workout-badge { background: var(--secondary); color:white; padding:5px 10px; border-radius:4px; font-size:0.8rem; margin-bottom:10px; display:inline-block; }
+        
+        /* LEAGUE TABLE */
+        .pl-table { width:100%; text-align:center; border-collapse:collapse; margin-bottom:15px; font-size:0.9rem; }
+        .pl-table th { background:#333; padding:8px; color:#aaa; }
+        .pl-table td { padding:8px; border-bottom:1px solid #333; }
+        .pl-table tr.user-row { background: rgba(0, 230, 118, 0.1); font-weight:bold; color:var(--primary); }
     </style>
 </head>
 <body>
@@ -142,6 +148,10 @@
             </div>
             <div class="modal-row"><span>Score</span><select id="set-pvp-score"><option value="501">501</option><option value="301">301</option></select></div>
         </div>
+        <div id="setup-ghost" class="setup-group" style="display:none">
+            <p style="color:#aaa; font-size:0.9rem; margin-bottom:10px;">Paste a match code to play against a Ghost.</p>
+            <textarea id="ghost-code" rows="5" placeholder="Paste Code Here..."></textarea>
+        </div>
         <button class="btn btn-primary" onclick="app.confirmSetup()">START</button>
         <button class="btn" style="margin-top:10px;background:#333" onclick="app.closeSetup()">Cancel</button>
     </div>
@@ -164,7 +174,30 @@
             <div class="stat-row"><span>Super Tons (140+)</span><strong id="rep-140">0</strong></div>
             <div class="stat-row" style="border:none"><span>Maximums (180)</span><strong id="rep-180" style="color:var(--highlight)">0</strong></div>
         </div>
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <button class="btn" style="background:#444;" onclick="Stats.shareMatch()">📤 Share Replay</button>
+        </div>
         <button class="btn btn-primary" id="btn-report-next" onclick="app.closeReport()">Main Menu</button>
+    </div>
+</div>
+
+<div id="pl-modal">
+    <div class="modal-card" style="max-width:600px;">
+        <h2>Premier League</h2>
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+            <span id="pl-week" style="color:var(--highlight); font-weight:bold;">Week 1</span>
+            <span style="color:#aaa; font-size:0.8rem;">Best of 12 (First to 7)</span>
+        </div>
+        
+        <table class="pl-table">
+            <thead><tr><th>#</th><th>Name</th><th>P</th><th>W</th><th>D</th><th>L</th><th>+/-</th><th>Pts</th></tr></thead>
+            <tbody id="pl-body"></tbody>
+        </table>
+        
+        <div id="pl-actions">
+            <button class="btn btn-primary" onclick="app.playLeagueMatch()">Play Next Match</button>
+        </div>
+        <button class="btn" style="margin-top:10px;" onclick="document.getElementById('pl-modal').style.display='none'">Close</button>
     </div>
 </div>
 
@@ -226,10 +259,11 @@
         <h2>Career Stats Hub</h2>
         <div class="tabs">
             <button class="tab-btn active" onclick="Stats.switchTab('history')">History</button>
-            <button class="tab-btn" onclick="Stats.switchTab('pbs')">PBs</button>
-            <button class="tab-btn" onclick="Stats.switchTab('rivals')">Rivals</button>
+            <button class="tab-btn" onclick="Stats.switchTab('pbs')">Personal Bests</button>
         </div>
-        <div id="tab-history" style="display:block;"><div class="history-list" id="history-list"></div></div>
+        <div id="tab-history" style="display:block;">
+            <div class="history-list" id="history-list"></div>
+        </div>
         <div id="tab-pbs" style="display:none;">
             <div class="pb-card"><span class="pb-title">Best X01 Avg</span><span class="pb-val" id="pb-avg">0.0</span></div>
             <div class="pb-card"><span class="pb-title">Highest Checkout</span><span class="pb-val" id="pb-co">0</span></div>
@@ -240,14 +274,14 @@
             <div class="pb-card"><span class="pb-title">RTC Best (Darts)</span><span class="pb-val" id="pb-rtc">--</span></div>
             <div class="pb-card"><span class="pb-title">Cricket Best MPR</span><span class="pb-val" id="pb-crick">0.0</span></div>
         </div>
-        <div id="tab-rivals" style="display:none;"><div id="rivals-list" class="history-list"></div></div>
         <button class="btn btn-primary" style="margin-top:10px;" onclick="document.getElementById('stats-modal').style.display='none'">Close</button>
+        <button class="btn" style="margin-top:10px; background:#444;" onclick="Stats.exportData()">Download Data</button>
     </div>
 </div>
 
 <div id="screen-menu" class="screen active">
     <header>
-        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v20.1</span></h1>
+        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v21.0</span></h1>
         <div style="display:flex; gap:10px;">
             <div class="icon-btn" onclick="document.getElementById('settings-modal').style.display='flex'">⚙️</div>
             <div class="icon-btn" onclick="Coach.analyze()">🎓</div>
@@ -273,20 +307,16 @@
         </div>
 
         <div class="menu-grid">
-            <div class="menu-card" style="grid-column: span 2; background: linear-gradient(135deg, #1e1e1e, #ff6f00); border-color: var(--highlight);" onclick="app.openScenarios()">
-                <span style="font-size:2rem">🏆</span><br><b style="color:var(--highlight)">MOMENTS OF GLORY</b><br><span style="font-size:0.8rem; color:#aaa">Recreate History</span>
+            <div class="menu-card" style="grid-column: span 2; background: linear-gradient(135deg, #1e1e1e, #2c1e1e); border-color: var(--highlight);" onclick="app.openPL()">
+                <span style="font-size:2rem">🏆</span><br><b style="color:var(--highlight)">PREMIER LEAGUE</b><br><span style="font-size:0.8rem; color:#aaa">Full Season</span>
             </div>
             
-            <div class="menu-card" onclick="app.startTournament()">
-                <span style="font-size:2rem">🛡️</span><br><b>Tournament</b>
-            </div>
-            
-            <div class="menu-card" onclick="app.loadMode('route121')">
-                <span style="font-size:2rem">🛣️</span><br><b>Route 121</b>
+            <div class="menu-card" style="background: linear-gradient(135deg, #1e1e1e, #004d40); border-color: var(--primary);" onclick="app.loadMode('route121')">
+                <span style="font-size:2rem">🛣️</span><br><b style="color:var(--primary)">ROUTE 121</b><br><span style="font-size:0.8rem; color:#aaa">Pro Practice</span>
             </div>
 
-            <div class="menu-card" onclick="app.loadMode('finisher')">
-                <span style="font-size:2rem">☠️</span><br><b>Finisher</b>
+            <div class="menu-card" style="background: linear-gradient(135deg, #1e1e1e, #1a237e); border-color: var(--secondary);" onclick="app.openGhostSetup()">
+                <span style="font-size:2rem">👻</span><br><b style="color:var(--secondary)">GHOST RIVALS</b><br><span style="font-size:0.8rem; color:#aaa">Load Replay</span>
             </div>
             
             <div class="menu-card" onclick="app.openSetup('league')">
@@ -304,8 +334,17 @@
             <div class="menu-card" onclick="app.loadMode('bobs27')">
                 <span style="font-size:2rem">💊</span><br><b>Bob's 27</b>
             </div>
-            <div class="menu-card" onclick="app.openSetup('pvp')">
-                <span style="font-size:2rem">👥</span><br><b>Vs Player</b>
+            <div class="menu-card" onclick="app.loadMode('train_out')">
+                <span style="font-size:2rem">🎯</span><br><b>Trainer</b>
+            </div>
+            <div class="menu-card" onclick="app.openScenarios()">
+                <span style="font-size:2rem">📜</span><br><b>Scenarios</b>
+            </div>
+            <div class="menu-card" onclick="app.loadMode('finisher')">
+                <span style="font-size:2rem">☠️</span><br><b>Finisher</b>
+            </div>
+             <div class="menu-card" onclick="app.openSetup('pvp')">
+                <span style="font-size:2rem">👥</span><br><b>PvP</b>
             </div>
         </div>
         <button class="btn" style="background:#222; margin-top:10px; font-size:0.8rem" onclick="Stats.clear()">Reset Career</button>
@@ -370,46 +409,59 @@
 </div>
 
 <script>
-// --- CORE UTILS (DEFINED FIRST) ---
+// --- CORE UTILS ---
 const FX={canvas:null,ctx:null,particles:[],init:function(){this.canvas=document.getElementById("confetti-canvas");if(this.canvas)this.ctx=this.canvas.getContext("2d")},shake:function(){if(document.body){document.body.classList.add("shake");setTimeout(()=>document.body.classList.remove("shake"),500)}},fireConfetti:function(){if(!this.canvas)this.init();if(!this.canvas)return;this.canvas.width=window.innerWidth;this.canvas.height=window.innerHeight;for(let e=0;e<100;e++){this.particles.push({x:window.innerWidth/2,y:window.innerHeight/2,vx:15*(Math.random()-.5),vy:15*(Math.random()-.5),color:`hsl(${360*Math.random()}, 100%, 50%)`,life:100})}this.animate()},animate:function(){if(!this.ctx)return;if(0===this.particles.length){this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);return}this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);for(let e=0;e<this.particles.length;e++){let t=this.particles[e];t.x+=t.vx;t.y+=t.vy;t.life--;this.ctx.fillStyle=t.color;this.ctx.fillRect(t.x,t.y,8,8)}this.particles=this.particles.filter(e=>e.life>0);requestAnimationFrame(()=>this.animate())}};
 const SFX={ctx:null,init:function(){const e=window.AudioContext||window.webkitAudioContext;if(e)this.ctx=new e},playThud:function(){if(navigator.vibrate)navigator.vibrate(40);if(!this.ctx)this.init();if(!this.ctx)return;try{if("suspended"===this.ctx.state)this.ctx.resume();const e=this.ctx.createOscillator(),t=this.ctx.createGain();e.connect(t);t.connect(this.ctx.destination);e.frequency.setValueAtTime(150,this.ctx.currentTime);e.frequency.exponentialRampToValueAtTime(40,this.ctx.currentTime+.1);t.gain.setValueAtTime(.5,this.ctx.currentTime);t.gain.exponentialRampToValueAtTime(.01,this.ctx.currentTime+.1);e.start();e.stop(this.ctx.currentTime+.1)}catch(e){}}};
 const Speaker={speak:function(e,t){if(!window.speechSynthesis)return;window.speechSynthesis.cancel();if(180===t){const e=new SpeechSynthesisUtterance("ONE HUNDRED AND EIGHTY!");e.pitch=.5;e.rate=.8;e.volume=1;window.speechSynthesis.speak(e);FX.shake();FX.fireConfetti();return}const n=new SpeechSynthesisUtterance(e);t>=100?n.pitch=.8:t>=60?n.pitch=1:n.pitch=1.1;if(t>=100)FX.fireConfetti();window.speechSynthesis.speak(n)}};
 const Voice={recognition:null,isListening:!1,init:function(){if(window.webkitSpeechRecognition){this.recognition=new window.webkitSpeechRecognition;this.recognition.continuous=!0;this.recognition.lang="en-US";this.recognition.onresult=e=>this.processCommand(e.results[e.results.length-1][0].transcript);this.recognition.onend=()=>{if(this.isListening)this.recognition.start()}}},toggle:function(){if(!this.recognition)this.init();if(!this.recognition)return alert("Voice not supported");this.isListening?(this.recognition.stop(),this.isListening=!1):(this.recognition.start(),this.isListening=!0);const e=this.isListening?"icon-btn listening":"icon-btn",t=document.getElementById("mic-toggle-game");if(t)t.className=e},processCommand:function(e){const t=e.toLowerCase().trim();if(t.includes("next"))return app.handleAction();let n="S";t.includes("double")&&(n="D");t.includes("triple")&&(n="T");let i=0;if(t.includes("bull"))i=50;else if(t.includes("25"))i=25;else{const e=t.match(/(\d+)/);e&&(i=parseInt(e[0]))}i>0&&i<=50&&(50===i&&(i=25,n="D"),app.handleHit(i,n))}};
 
-// --- STATS & COACH (DEFINED BEFORE APP) ---
+const BOTS=[{name:"Pub Rookie",avg:35,checkout:.1},{name:"Local Champ",avg:45,checkout:.2},{name:"County Player",avg:55,checkout:.4},{name:"Semi-Pro",avg:70,checkout:.6},{name:"The Iceman",avg:95,checkout:.9}];
+// PREMIER LEAGUE ROSTER
+const PL_BOTS = [
+    {name:"YOU", p:0, w:0, d:0, l:0, pd:0, pts:0},
+    {name:"MvG", p:0, w:0, d:0, l:0, pd:0, pts:0},
+    {name:"Price", p:0, w:0, d:0, l:0, pd:0, pts:0},
+    {name:"Wright", p:0, w:0, d:0, l:0, pd:0, pts:0},
+    {name:"Smith", p:0, w:0, d:0, l:0, pd:0, pts:0},
+    {name:"Asp", p:0, w:0, d:0, l:0, pd:0, pts:0},
+    {name:"Cullen", p:0, w:0, d:0, l:0, pd:0, pts:0},
+    {name:"Cross", p:0, w:0, d:0, l:0, pd:0, pts:0}
+];
+
+const Strategist={preferred:[20,16,10,8,4,25],solve:function(e,t){if(e>170||e<2||[169,168,166,165,163,162,159].includes(e))return null;if(50===e)return"Bull";if(e<=40&&e%2==0)return"D"+e/2;if(1===t)return null;for(let n of this.preferred){let i=e-2*n;if(i>0&&i<=60){let e="";if(50===i)e="Bull";else if(25===i)e="25";else if(i<=20)e=i;else if(i%2==0&&i<=40)e="D"+i/2;else if(i%3==0&&i<=60)e="T"+i/3;if(e)return`${e} D${n}`}}for(let n=60;n>=1;n--){let i=e-n;if(i>=2&&i<=40&&i%2==0){let t=this.fmt(n);if(t)return`${t} D${i/2}`}}if(2===t)return null;let n=e-60,i=this.solve(n,2);if(i)return`T20 ${i}`;n=e-57;i=this.solve(n,2);if(i)return`T19 ${i}`;if(170===e)return"T20 T20 Bull";return"Setup shot"},fmt:function(e){if(50===e)return"Bull";if(25===e)return"25";if(e<=20)return e;if(e<=40&&e%2==0)return"D"+e/2;if(e<=60&&e%3==0)return"T"+e/3;return null},getCheckout:function(e){if(e>350)return"";if(e>170){let t=e-170;if(t<=180){if(t<=60){let e=this.fmt(t);if(e)return`Score ${e} to leave 170`}return`Hit T20 to leave ${e-60}`}return""}if([169,168,166,165,163,162,159].includes(e)){return`No out. Hit T20 to leave ${e-60}`}let t=this.solve(e,3);return t?t:"Setup shot"}};
+
+// --- STATS & COACH ---
 const Stats = {
     data: { 
         matches: [], friends: [], 
         records: { bobs: 0, rtc: 999, jdc: 0, cricket: 0, route121: 121 },
-        leagueRank: 0, drillLevel: 0, heatmap: [], userName: "YOU", bestLeg: 999, highOut: 0, xp: 0, level: 1, theme: "default" 
+        leagueRank: 0, drillLevel: 0, heatmap: [], userName: "YOU", bestLeg: 999, highOut: 0, xp: 0, level: 1, theme: "default",
+        premierLeague: { active: false, week: 1, table: JSON.parse(JSON.stringify(PL_BOTS)) } 
     },
     load: function() {
         try {
-            const e = localStorage.getItem("darts_v20");
+            const e = localStorage.getItem("darts_v21");
             if (e) {
                 this.data = JSON.parse(e);
-                // Sanity Checks for v20
                 if(!this.data.matches) this.data.matches = [];
                 if(!this.data.friends) this.data.friends = [];
                 if(!this.data.heatmap) this.data.heatmap = [];
                 if(!this.data.records) this.data.records = { bobs: 0, rtc: 999, jdc: 0, cricket: 0, route121: 121 };
                 if(!this.data.records.route121) this.data.records.route121 = 121;
                 if(!this.data.xp) this.data.xp = 0;
+                if(!this.data.premierLeague) this.data.premierLeague = { active: false, week: 1, table: JSON.parse(JSON.stringify(PL_BOTS)) };
             }
             this.applyTheme();
         } catch(e) {}
         this.renderChart(); this.updateBadges(); this.renderXP();
     },
-    save: function() { localStorage.setItem("darts_v20", JSON.stringify(this.data)) },
+    save: function() { localStorage.setItem("darts_v21", JSON.stringify(this.data)) },
     setName: function(n) { this.data.userName = n; this.save(); },
     
     addFriend: function() {
         const n = document.getElementById("new-player-name").value;
         if(n && !this.data.friends.includes(n)) {
-            this.data.friends.push(n);
-            this.save();
-            this.renderFriends();
-            alert("Player Added!");
+            this.data.friends.push(n); this.save(); this.renderFriends(); alert("Player Added!");
         }
     },
     renderFriends: function() {
@@ -424,18 +476,14 @@ const Stats = {
         }
     },
     importData: function(input) {
-        const file = input.files[0];
-        if (!file) return;
+        const file = input.files[0]; if (!file) return;
         const reader = new FileReader();
         reader.onload = function(e) {
             try {
                 const imported = JSON.parse(e.target.result);
                 if (imported.xp !== undefined && imported.matches) {
-                    if(confirm("Overwrite current career?")) {
-                        localStorage.setItem("darts_v20", JSON.stringify(imported)); 
-                        location.reload();
-                    }
-                } else { alert("Invalid backup file."); }
+                    if(confirm("Overwrite career?")) { localStorage.setItem("darts_v21", JSON.stringify(imported)); location.reload(); }
+                } else { alert("Invalid backup."); }
             } catch (err) { alert("Error reading file."); }
         };
         reader.readAsText(file);
@@ -443,26 +491,18 @@ const Stats = {
     addXP: function(amount) {
         this.data.xp += amount;
         const nextLvl = this.data.level * 500;
-        if(this.data.xp >= nextLvl) {
-            this.data.level++;
-            alert(`LEVEL UP! You are now Level ${this.data.level}`);
-            this.checkUnlocks();
-        }
-        this.save();
-        this.renderXP();
+        if(this.data.xp >= nextLvl) { this.data.level++; alert(`LEVEL UP! Level ${this.data.level}`); this.checkUnlocks(); }
+        this.save(); this.renderXP();
     },
     checkUnlocks: function() {
-        const blade = document.getElementById("opt-blade");
-        const mid = document.getElementById("opt-mid");
+        const blade = document.getElementById("opt-blade"); const mid = document.getElementById("opt-mid");
         if(blade && this.data.level >= 5) blade.disabled = false;
         if(mid && this.data.level >= 10) mid.disabled = false;
     },
     renderXP: function() {
-        const next = this.data.level * 500;
-        const prev = (this.data.level - 1) * 500;
+        const next = this.data.level * 500; const prev = (this.data.level - 1) * 500;
         const perc = ((this.data.xp - prev) / (next - prev)) * 100;
-        const bar = document.getElementById("xp-bar");
-        const lbl = document.getElementById("xp-label");
+        const bar = document.getElementById("xp-bar"); const lbl = document.getElementById("xp-label");
         if(bar) bar.style.width = perc + "%";
         if(lbl) lbl.innerText = `Lvl ${this.data.level} - ${this.data.xp} XP`;
         this.checkUnlocks();
@@ -477,9 +517,12 @@ const Stats = {
         let oppName = "Player 2";
         if (app.mode === "league" && BOTS[app.settings.botIdx]) oppName = BOTS[app.settings.botIdx].name;
         if (app.mode === "pvp") oppName = app.settings.pvpOpp || "Player 2";
+        if (app.mode === "pl") oppName = "Premier League Bot";
+        
         this.data.matches.push({ 
             date: new Date().toLocaleDateString(), avg: parseFloat(avg), result: res, 
-            type: "x01", opponent: oppName, checkoutPerc: missed+doubles > 0 ? Math.round((doubles / (doubles+missed))*100) : 0
+            type: "x01", opponent: oppName, checkoutPerc: missed+doubles > 0 ? Math.round((doubles / (doubles+missed))*100) : 0,
+            log: app.state.throwLog // SAVE THROW LOG FOR GHOSTS
         });
         if (this.data.matches.length > 50) this.data.matches.shift();
         if(res === "W") this.addXP(100); else this.addXP(20);
@@ -492,8 +535,13 @@ const Stats = {
         if(type === 'rtc' && score < this.data.records.rtc) this.data.records.rtc = score;
         if(type === 'route121' && score > this.data.records.route121) this.data.records.route121 = score;
         if (this.data.matches.length > 50) this.data.matches.shift();
-        this.addXP(30); 
-        this.save();
+        this.addXP(30); this.save();
+    },
+    shareMatch: function() {
+        const last = this.data.matches[this.data.matches.length-1];
+        if(!last || !last.log) { alert("No recent match data."); return; }
+        const code = btoa(JSON.stringify(last.log));
+        prompt("Copy this Ghost Code:", code);
     },
     updateRecords: function(darts, checkout) {
         if (darts >= 6 && darts < this.data.bestLeg) this.data.bestLeg = darts;
@@ -506,15 +554,10 @@ const Stats = {
         this.save();
     },
     updateLeague: function(e) { if(e === this.data.leagueRank){ this.data.leagueRank++; this.save(); } },
-    showHub: function() {
-        document.getElementById("stats-modal").style.display = "flex";
-        this.switchTab('history');
-        this.renderRivals();
-    },
+    showHub: function() { document.getElementById("stats-modal").style.display = "flex"; this.switchTab('history'); },
     switchTab: function(tab) {
         document.getElementById("tab-history").style.display = tab === 'history' ? 'block' : 'none';
         document.getElementById("tab-pbs").style.display = tab === 'pbs' ? 'block' : 'none';
-        document.getElementById("tab-rivals").style.display = tab === 'rivals' ? 'block' : 'none';
         document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
         event.target.classList.add("active");
         if(tab === 'history') this.showHistory();
@@ -535,37 +578,18 @@ const Stats = {
         list.innerHTML = "";
         [...this.data.matches].reverse().forEach(m => {
             let label = "", val = "", cls = "";
-            if(m.type === 'x01' || !m.type) {
-                cls = m.result === "W" ? "hist-win" : "hist-loss";
-                label = `Vs ${m.opponent}`; val = `Avg: ${m.avg}`;
-            } else {
-                cls = "hist-win"; label = m.opponent; val = m.avg;
-            }
+            if(m.type === 'x01' || !m.type) { cls = m.result === "W" ? "hist-win" : "hist-loss"; label = `Vs ${m.opponent}`; val = `Avg: ${m.avg}`; } 
+            else { cls = "hist-win"; label = m.opponent; val = m.avg; }
             list.innerHTML += `<div class="hist-row ${cls}"><div><span class="hist-date">${m.date} - ${label}</span></div><div style="font-weight:bold;">${val}</div></div>`;
         });
-    },
-    renderRivals: function() {
-        const d = document.getElementById("rivals-list");
-        if(d) {
-            d.innerHTML = "";
-            const counts = {};
-            this.data.matches.filter(m => (m.type === 'x01' || !m.type)).forEach(m => {
-                if(!counts[m.opponent]) counts[m.opponent] = { w:0, l:0 };
-                if(m.result === 'W') counts[m.opponent].w++; else counts[m.opponent].l++;
-            });
-            for (const [name, s] of Object.entries(counts)) {
-                d.innerHTML += `<div class="hist-row"><div>${name}</div><div>${s.w}W - ${s.l}L</div></div>`;
-            }
-        }
     },
     exportData: function() {
         const e = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data));
         const t = document.createElement("a"); t.href = e; t.download = "dartsos_backup.json"; document.body.appendChild(t); t.click(); t.remove();
     },
-    clear: function() { if(confirm("Reset all data?")) { localStorage.removeItem("darts_v20"); location.reload(); } },
+    clear: function() { if(confirm("Reset all data?")) { localStorage.removeItem("darts_v21"); location.reload(); } },
     renderChart: function() {
-        const e = document.getElementById("chart-area");
-        if(!e) return;
+        const e = document.getElementById("chart-area"); if(!e) return;
         const t = this.data.matches.filter(x => x.type === "x01" || !x.type);
         if (t.length < 2) return e.innerHTML = "<div style='padding:60px;text-align:center;color:#555'>Play matches to see stats</div>";
         const avgs = t.map(x => x.avg);
@@ -585,45 +609,36 @@ const Stats = {
 
 const Coach = {
     analyze: function() {
-        // --- FIX: SAFE LOADING ---
         const m = Stats.data.matches ? Stats.data.matches.filter(x => x.type === 'x01' || !x.type) : [];
         const heat = Stats.data.heatmap || [];
         const box = document.getElementById("coach-content");
         document.getElementById("coach-modal").style.display = "flex";
-
         if(m.length < 3) { box.innerHTML = "I need more match data! Play at least 3 League matches."; return; }
-
         let driftMsg = "Your grouping is centered.";
         if(heat.length > 10) {
             let sumX = 0; heat.forEach(p => sumX += p.x); const avgX = sumX / heat.length;
             if(avgX < 240) driftMsg = "You are drifting left (into the 5s). Check your elbow alignment.";
             if(avgX > 260) driftMsg = "You are drifting right (into the 1s). You might be snatching the dart.";
         }
-
         const last5 = m.slice(-5);
         const avg = last5.reduce((a,b)=>a+parseFloat(b.avg),0)/last5.length;
         let doubleSum = 0, doubleCount = 0;
         last5.forEach(x => { if(x.checkoutPerc > 0) { doubleSum+=x.checkoutPerc; doubleCount++; } });
         const dblPerc = doubleCount > 0 ? doubleSum/doubleCount : 0;
-
         let advice = "", rec = "";
         if(dblPerc < 15) { advice = "Missed doubles are killing your game."; rec = "RECOMMENDATION: Play 'Bob's 27'."; }
         else if (avg < 40) { advice = "We need to build scoring consistency."; rec = "RECOMMENDATION: Play 'Round The Clock'."; }
         else { advice = "You are playing well!"; rec = "RECOMMENDATION: Try 'JDC Academy'."; }
-
         box.innerHTML = `<b>Recent Form:</b> Avg ${avg.toFixed(1)} | Doubles ${Math.round(dblPerc)}%<br><br>${driftMsg}<br><br>${advice}<span class="coach-rec">${rec}</span>`;
     }
 };
 
-// --- SCENARIOS (MOMENTS OF GLORY) ---
 const SCENARIOS = [
     { title: "The 9 Darter", desc: "You have 141 left. 3 darts to make history.", p1: 141, p2: 300, darts: 3 },
     { title: "The Big Fish", desc: "The ultimate finish. 170 left. 3 darts.", p1: 170, p2: 200, darts: 3 },
     { title: "Shanghai Finish", desc: "120 left. T20, S20, D20 required.", p1: 120, p2: 120, darts: 3 },
     { title: "World Final Decider", desc: "Sudden death leg. 85 left. Opponent is on 32.", p1: 85, p2: 32, darts: 6 }
 ];
-
-const Strategist={preferred:[20,16,10,8,4,25],solve:function(e,t){if(e>170||e<2||[169,168,166,165,163,162,159].includes(e))return null;if(50===e)return"Bull";if(e<=40&&e%2==0)return"D"+e/2;if(1===t)return null;for(let n of this.preferred){let i=e-2*n;if(i>0&&i<=60){let e="";if(50===i)e="Bull";else if(25===i)e="25";else if(i<=20)e=i;else if(i%2==0&&i<=40)e="D"+i/2;else if(i%3==0&&i<=60)e="T"+i/3;if(e)return`${e} D${n}`}}for(let n=60;n>=1;n--){let i=e-n;if(i>=2&&i<=40&&i%2==0){let t=this.fmt(n);if(t)return`${t} D${i/2}`}}if(2===t)return null;let n=e-60,i=this.solve(n,2);if(i)return`T20 ${i}`;n=e-57;i=this.solve(n,2);if(i)return`T19 ${i}`;if(170===e)return"T20 T20 Bull";return"Setup shot"},fmt:function(e){if(50===e)return"Bull";if(25===e)return"25";if(e<=20)return e;if(e<=40&&e%2==0)return"D"+e/2;if(e<=60&&e%3==0)return"T"+e/3;return null},getCheckout:function(e){if(e>350)return"";if(e>170){let t=e-170;if(t<=180){if(t<=60){let e=this.fmt(t);if(e)return`Score ${e} to leave 170`}return`Hit T20 to leave ${e-60}`}return""}if([169,168,166,165,163,162,159].includes(e)){return`No out. Hit T20 to leave ${e-60}`}let t=this.solve(e,3);return t?t:"Setup shot"}};
 
 // --- RENDERER ---
 const BoardRenderer = {
@@ -683,6 +698,7 @@ const app = {
     mode: null, state: {}, inputMode: "board", numpadBuffer: "", settings: { score: 501, legs: 3, rtcMode: 'S', botIdx: 0, pvpOpp: "Player 2" }, historyStack: [], markerList: [],
     tournament: { active: false, round: 0 },
     workout: { active: false, phase: 0 },
+    ghost: null, // GHOST DATA
     
     goHome: function() {
         document.getElementById("screen-game").classList.remove("active");
@@ -695,7 +711,6 @@ const app = {
         const v = document.getElementById("cam-feed");
         if(v.srcObject) v.srcObject.getTracks().forEach(t=>t.stop());
         document.getElementById("cam-container").classList.remove("active");
-        
         Stats.load();
     },
     
@@ -712,7 +727,7 @@ const app = {
         }
     },
 
-    // --- SMART LAB WORKOUT LOGIC ---
+    // --- SMART LAB ---
     startSmartLab: function() {
         this.workout = { active: true, phase: 1 };
         alert("SMART LAB WORKOUT\n\nPhase 1: Warmup\nRound The Clock (Singles)");
@@ -751,16 +766,13 @@ const app = {
     launchScenario: function(idx) {
         document.getElementById("scenario-modal").style.display = "none";
         const s = SCENARIOS[idx];
-        this.mode = "scenario"; // acts like league logic mostly
-        this.loadMode('league'); // Base UI
-        
-        // Override state for scenario
+        this.mode = "scenario"; 
+        this.loadMode('league'); 
         this.state.score = s.p1;
         this.state.p2Score = s.p2;
         this.state.dartsInTurn = 0;
         this.state.turnScore = 0;
-        this.state.scenarioDarts = s.darts; // Limit
-        
+        this.state.scenarioDarts = s.darts;
         document.getElementById("game-title").innerText = s.title;
         this.updateUI();
     },
@@ -771,8 +783,7 @@ const app = {
         document.getElementById("setup-modal").style.display = "flex";
         document.getElementById("setup-title").innerText = mode === "rtc" ? "Round The Clock" : "Match Setup";
         
-        // Toggle Sections
-        ['setup-league', 'setup-rtc', 'setup-pvp'].forEach(id => document.getElementById(id).style.display = 'none');
+        ['setup-league', 'setup-rtc', 'setup-pvp', 'setup-ghost'].forEach(id => document.getElementById(id).style.display = 'none');
         
         if(mode === 'league') {
             document.getElementById("setup-league").style.display = "block";
@@ -790,6 +801,62 @@ const app = {
             Stats.renderFriends();
         }
     },
+    
+    // --- GHOST SETUP ---
+    openGhostSetup: function() {
+        this.mode = "ghost";
+        document.getElementById("setup-modal").style.display = "flex";
+        document.getElementById("setup-title").innerText = "Load Ghost";
+        ['setup-league', 'setup-rtc', 'setup-pvp'].forEach(id => document.getElementById(id).style.display = 'none');
+        document.getElementById("setup-ghost").style.display = "block";
+    },
+    startGhostMatch: function() {
+        const code = document.getElementById("ghost-code").value;
+        try {
+            const log = JSON.parse(atob(code));
+            this.ghost = { moves: log, index: 0 };
+            this.settings.legs = 1; this.settings.score = 501;
+            this.closeSetup();
+            this.loadMode("league");
+            document.getElementById("game-title").innerText = "Vs Ghost";
+        } catch(e) { alert("Invalid Code"); }
+    },
+    
+    // --- PREMIER LEAGUE ---
+    openPL: function() {
+        const pl = Stats.data.premierLeague;
+        if(!pl.active) {
+            if(confirm("Start new Premier League Season?")) {
+                pl.active = true; pl.week = 1; 
+                pl.table = JSON.parse(JSON.stringify(PL_BOTS)); 
+                Stats.save();
+            } else return;
+        }
+        this.renderPLTable();
+        document.getElementById("pl-modal").style.display = "flex";
+    },
+    renderPLTable: function() {
+        const pl = Stats.data.premierLeague;
+        document.getElementById("pl-week").innerText = "Week " + pl.week;
+        const body = document.getElementById("pl-body");
+        
+        // Sort
+        pl.table.sort((a,b) => b.pts - a.pts || b.pd - a.pd);
+        
+        body.innerHTML = pl.table.map((t, i) => `
+            <tr class="${t.name==='YOU'?'user-row':''}">
+                <td>${i+1}</td><td>${t.name}</td><td>${t.p}</td><td>${t.w}</td><td>${t.d}</td><td>${t.l}</td><td>${t.pd}</td><td>${t.pts}</td>
+            </tr>
+        `).join("");
+    },
+    playLeagueMatch: function() {
+        this.mode = "pl";
+        document.getElementById("pl-modal").style.display = "none";
+        this.settings.score = 501; this.settings.legs = 12; // Best of 12 logic handled in win check
+        this.loadMode("league");
+        document.getElementById("game-title").innerText = "Premier League";
+    },
+    
     startTournament: function() {
         this.tournament = { active: true, round: 1 };
         this.mode = "league";
@@ -807,13 +874,13 @@ const app = {
     
     closeSetup: function() { document.getElementById("setup-modal").style.display = "none"; },
     confirmSetup: function() {
+        if (this.mode === "ghost") { this.startGhostMatch(); return; }
+        
         this.settings.score = parseInt(document.getElementById("set-score").value);
         this.settings.legs = parseInt(document.getElementById("set-legs").value);
         this.settings.rtcMode = document.getElementById("set-rtc-mode").value;
         this.settings.botIdx = parseInt(document.getElementById("set-bot-level").value); 
         this.settings.pvpOpp = document.getElementById("set-pvp-opp").value;
-        
-        // Handle PvP score separately
         if(this.mode === 'pvp') this.settings.score = parseInt(document.getElementById("set-pvp-score").value);
         
         this.closeSetup();
@@ -836,7 +903,6 @@ const app = {
         const rate = hits + miss > 0 ? Math.round((hits / (hits+miss))*100) + "%" : "--";
         setVal("rep-doubles", rate);
         setVal("rep-score", `${this.state.matchScore[0]} - ${this.state.matchScore[1]}`);
-        
         setVal("rep-100", this.state.stats.tons);
         setVal("rep-140", this.state.stats.superTons);
         setVal("rep-180", this.state.stats.maxes);
@@ -845,8 +911,35 @@ const app = {
             ? ((this.state.stats.first9Score / this.state.stats.first9Darts) * 3).toFixed(1) : "0.0";
         setVal("rep-first9", f9);
 
-        // Logic for next button behavior
-        btn.onclick = () => { this.closeReport(); }; // Default
+        btn.onclick = () => { this.closeReport(); }; 
+
+        if (this.mode === "pl") {
+            const pl = Stats.data.premierLeague;
+            // Update Table for User
+            const user = pl.table.find(t => t.name === "YOU");
+            user.p++;
+            const legsWon = this.state.matchScore[0];
+            const legsLost = this.state.matchScore[1];
+            if(legsWon > legsLost) { user.w++; user.pts+=2; }
+            else if(legsWon === legsLost) { user.d++; user.pts+=1; }
+            else { user.l++; }
+            user.pd += (legsWon - legsLost);
+            
+            // Sim others
+            pl.table.filter(t => t.name !== "YOU").forEach(t => {
+                t.p++;
+                const r = Math.random();
+                if(r > 0.6) { t.w++; t.pts+=2; t.pd += Math.floor(Math.random()*4)+1; }
+                else if(r > 0.3) { t.l++; t.pd -= Math.floor(Math.random()*4)+1; }
+                else { t.d++; t.pts+=1; }
+            });
+            pl.week++;
+            if(pl.week > 14) { alert("SEASON OVER!"); pl.active = false; }
+            Stats.save();
+            btn.innerText = "View Table";
+            btn.onclick = () => { this.closeReport(); this.openPL(); };
+            return;
+        }
 
         if (this.workout.active) {
              btn.innerText = "Next Workout Phase";
@@ -874,7 +967,6 @@ const app = {
         } else {
             if(msg) msg.style.display = "none";
             if(resTitle) { resTitle.innerText = won ? "VICTORY" : "DEFEAT"; resTitle.style.color = won ? "var(--primary)" : "var(--danger)"; }
-            if(btn) { btn.innerText = "Main Menu"; btn.onclick = () => { this.closeReport(); }; }
         }
     },
     closeReport: function() { document.getElementById("report-modal").style.display = "none"; this.goHome(); },
@@ -899,7 +991,7 @@ const app = {
     numpadSubmit: function() {
         const e = parseInt(this.numpadBuffer);
         if (isNaN(e) || e > 180) { alert("Invalid"); this.numpadClear(); return; }
-        if (this.mode === "league" || this.mode === "pvp" || this.mode === "scenario") { this.state.dartsInTurn = 3; this.logicX01(e, "S", true); }
+        if (this.mode === "league" || this.mode === "pvp" || this.mode === "scenario" || this.mode === "ghost" || this.mode === "pl") { this.state.dartsInTurn = 3; this.logicX01(e, "S", true); }
         else if (this.mode === "finisher") { this.logicFinisher(e, "S", true); }
         else if (this.mode === "route121") { this.logicRoute121(e, "S", true); }
         this.numpadClear();
@@ -919,8 +1011,6 @@ const app = {
             targetList: [], targetIndex: 0, jdcLevel: 0, jdcScore: 0, rtcTarget: 1, rtcHits: 0,
             cricket: { 1: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, 2: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, s1:0, s2:0 },
             throwLog: [], trainerTarget: 0, trainerAttempts: 0,
-            
-            // ROUTE 121 VARS
             r121_target: 121, r121_dartsLeft: 9, r121_current: 121,
             scenarioDarts: 99
         };
@@ -1085,6 +1175,8 @@ const app = {
         else if (this.mode==="train_out") this.logicTrainer(n, type);
         else if (this.mode==="finisher") this.logicFinisher(n, type);
         else if (this.mode==="route121") this.logicRoute121(n, type);
+        else if (this.mode==="ghost") this.logicX01(n, type); // Ghost uses standard logic for P1
+        else if (this.mode==="pl") this.logicX01(n, type);
     },
     
     // --- ROUTE 121 LOGIC ---
@@ -1095,10 +1187,7 @@ const app = {
         // WIN (Checkout)
         if (left === 0 && (type === "D" || isManual)) {
             Speaker.speak("Yes!", 100); Stats.addXP(50);
-            
-            // Record if it's a new PB
             Stats.addResult('route121', this.state.r121_target, "Route 121");
-            
             alert("Checked out! Moving to " + (this.state.r121_target + 1));
             this.state.r121_target++;
             this.state.r121_current = this.state.r121_target;
@@ -1111,7 +1200,6 @@ const app = {
         // BUST
         if (left <= 1 && left !== 0) {
             Speaker.speak("Bust", 0);
-            // Reset to start of this target for remaining darts? No, usually reset current score to target
             this.state.r121_current = this.state.r121_target;
         } else {
             this.state.r121_current = left;
@@ -1121,7 +1209,6 @@ const app = {
         // FAIL (Out of darts)
         if (this.state.r121_dartsLeft <= 0) {
             alert("Failed! Dropping to safe haven.");
-            // Safe Havens logic: 121, 130, 140, 150, 160
             if (this.state.r121_target >= 160) this.state.r121_target = 160;
             else if (this.state.r121_target >= 150) this.state.r121_target = 150;
             else if (this.state.r121_target >= 140) this.state.r121_target = 140;
@@ -1132,7 +1219,6 @@ const app = {
             this.state.r121_dartsLeft = 9;
             this.markerList = []; BoardRenderer.render(this.handleHit.bind(this), false);
         }
-        
         this.updateRoute121UI();
     },
     
@@ -1146,10 +1232,8 @@ const app = {
             if (this.state.rtcTarget === 20) this.state.rtcTarget = 25;
             else if (this.state.rtcTarget === 25) { 
                 Stats.addResult('rtc', this.state.matchTotalDarts, "Round The Clock");
-                alert(`Done! ${Math.round(21/this.state.matchTotalDarts*100)}% acc.`);
-                // If in workout mode, advance
-                if(this.workout.active) this.nextWorkoutPhase(); else this.goHome();
-                return; 
+                alert(`Done! ${Math.round(21/this.state.matchTotalDarts*100)}% acc.`); 
+                if(this.workout.active) this.nextWorkoutPhase(); else this.goHome(); return; 
             }
             else this.state.rtcTarget++;
             this.markerList = []; BoardRenderer.render(this.handleHit.bind(this), false, this.markerList);
@@ -1210,13 +1294,10 @@ const app = {
         }
     },
     logicX01: function(pts, type, isManual) {
-        // --- SCENARIO MODE DART LIMIT CHECK ---
         if(this.mode === 'scenario') {
             this.state.matchTotalDarts++;
             if(this.state.matchTotalDarts > this.state.scenarioDarts) {
-                alert("Failed! Too many darts.");
-                this.goHome();
-                return;
+                alert("Failed! Too many darts."); this.goHome(); return;
             }
         }
         
@@ -1272,19 +1353,25 @@ const app = {
     },
     checkMatchWin: function() {
         const goal = Math.ceil(this.settings.legs / 2);
+        
+        // PL LOGIC: Draws allowed (6-6)
+        if(this.mode === 'pl') {
+             if(this.state.matchScore[0] >= 7 || this.state.matchScore[1] >= 7 || (this.state.matchScore[0]===6 && this.state.matchScore[1]===6)) {
+                 const avg = this.state.matchTotalDarts > 0 ? (this.state.matchTotalScore / this.state.matchTotalDarts * 3).toFixed(1) : "0.0";
+                 Stats.addMatch(avg, this.state.matchScore[0] >= this.state.matchScore[1] ? "W":"L", this.state.matchHitDoubles, this.state.matchMissedDoubles);
+                 app.showReport(this.state.matchScore[0] >= this.state.matchScore[1], avg);
+                 return;
+             }
+        }
+        
         if (this.state.matchScore[0] >= goal || this.state.matchScore[1] >= goal) {
             if (this.mode === "league" && this.state.matchScore[0] >= goal) Stats.updateLeague(this.state.botIdx);
-            
-            const avg = this.state.matchTotalDarts > 0 
-                ? (this.state.matchTotalScore / this.state.matchTotalDarts * 3).toFixed(1) 
-                : "0.0";
-            
+            const avg = this.state.matchTotalDarts > 0 ? (this.state.matchTotalScore / this.state.matchTotalDarts * 3).toFixed(1) : "0.0";
             Stats.addMatch(avg, this.state.matchScore[0] >= goal ? "W":"L", this.state.matchHitDoubles, this.state.matchMissedDoubles);
             app.showReport(this.state.matchScore[0] >= goal, avg);
         } else { alert(`Leg Over. ${this.state.matchScore[0]} - ${this.state.matchScore[1]}`); this.resetLeg(); }
     },
     resetLeg: function() {
-        // --- NEW: ALTERNATING STARTS ---
         this.state.starter = this.state.starter === 1 ? 2 : 1;
         this.state.currentPlayer = this.state.starter;
         
@@ -1293,16 +1380,26 @@ const app = {
         this.state.cricket = { 1: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, 2: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, s1:0, s2:0 };
         this.markerList = []; BoardRenderer.render(this.handleHit.bind(this)); this.updateUI();
         
-        if(this.state.starter === 2 && (this.mode === 'league' || this.mode === 'scenario')) {
-            setTimeout(() => this.botThrow(), 1000);
+        if(this.state.starter === 2) {
+            // Handle Ghost / League logic
+            if(this.mode === 'ghost') {
+                if(this.ghost && this.ghost.moves && this.ghost.index < this.ghost.moves.length) {
+                    // Ghost logic would go here, simplified:
+                    setTimeout(() => this.botThrow(), 1000); 
+                }
+            } else if(this.mode === 'league' || this.mode === 'scenario' || this.mode === 'pl') {
+                setTimeout(() => this.botThrow(), 1000);
+            }
         } else {
             Speaker.speak("Game On", 0);
         }
     },
     botThrow: function() {
         document.getElementById("status-msg").innerText="Opponent throwing...";
-        const e=BOTS[this.state.botIdx];
+        const e = (this.mode === 'league' || this.mode === 'scenario' || this.mode === 'pl') ? BOTS[this.state.botIdx] : {avg:50, checkout:0.3};
+        
         setTimeout((()=>{
+            // Simple Bot Logic
             const t=Math.floor(20*Math.random())-10; let o=e.avg+t;
             if(this.state.p2Score-o<=1){if(Math.random()<e.checkout){this.state.matchScore[1]++;this.checkMatchWin();return}else o=0;}
             this.state.p2Score-=o; Speaker.speak("Bot "+o,o); this.updateUI();
@@ -1315,9 +1412,9 @@ const app = {
 
     updateUI: function() {
         if(this.mode==="train_out" || this.mode==="finisher" || this.mode === "route121") return;
-        document.getElementById("hud-val-1").innerText = this.state.score;
-        document.getElementById("hud-val-2").innerText = this.state.p2Score;
-        document.getElementById("match-score-display").innerText = `${this.state.matchScore[0]} - ${this.state.matchScore[1]}`;
+        const e1 = document.getElementById("hud-val-1"); if(e1) e1.innerText = this.state.score;
+        const e2 = document.getElementById("hud-val-2"); if(e2) e2.innerText = this.state.p2Score;
+        const em = document.getElementById("match-score-display"); if(em) em.innerText = `${this.state.matchScore[0]} - ${this.state.matchScore[1]}`;
         const p1 = document.getElementById("p1-box"); const p2 = document.getElementById("p2-box");
         if(p1 && p2) {
             if (this.state.currentPlayer === 1) { p1.classList.remove("inactive"); p2.classList.add("inactive"); }
@@ -1369,13 +1466,8 @@ const app = {
             Speaker.speak("Player "+this.state.currentPlayer, 0);
             this.updateUI(); BoardRenderer.render(this.handleHit.bind(this));
         }
-        else if ("league"===this.mode || "scenario"===this.mode) {
+        else if ("league"===this.mode || "scenario"===this.mode || "pl"===this.mode) {
             if(0===this.state.dartsInTurn&&"board"===this.inputMode)return;
-            
-            // --- FIX: REMOVED DUPLICATE STATS CHECK ---
-            // The stats are now fully handled inside logicX01() when the 3rd dart hits.
-            // This prevents double counting when clicking "Next Round".
-            
             // Trigger Bot
             this.botThrow();
         } else if ("bobs27"===this.mode) {
