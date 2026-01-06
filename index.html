@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>DartsOS v17.5: Double Count Fix</title>
+    <title>DartsOS v19.2: Route 121</title>
     <style>
         :root {
             --bg: #121212; --panel: #1e1e1e; --primary: #00e676; --secondary: #2979ff; --danger: #ff1744;
@@ -52,6 +52,11 @@
         .hud-meta { font-size: 0.8rem; color: #888; margin-top: 5px; height: 20px; }
         .checkout-hint { background: #2e7d32; color: white; padding: 5px 10px; border-radius: 4px; font-size: 0.9rem; font-weight: bold; margin-top: 5px; display: inline-block; min-height: 20px; border: 1px solid #4caf50; }
         
+        /* MATCH CAM */
+        #cam-container { width: 100%; max-width: 450px; height: 0; background: #000; border-radius: 12px; margin-bottom: 10px; overflow: hidden; transition: height 0.3s; position: relative; }
+        #cam-container.active { height: 250px; border: 1px solid #333; }
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
         #board-container { width: 100%; max-width: 450px; aspect-ratio: 1/1; position: relative; margin: 10px 0; flex-shrink: 0; display: block; }
         svg { width: 100%; height: 100%; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); touch-action: manipulation; }
         
@@ -66,8 +71,8 @@
         .btn-miss { background: #424242; color: #ff5252; border: 1px solid #ff5252; flex: 0.4; }
         .rank-badge { background: var(--highlight); color: black; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; position: absolute; top: 10px; right: 10px; }
         
-        #setup-modal, #report-modal, #history-modal, #coach-modal, #settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; overflow-y: auto; padding: 20px; box-sizing: border-box; }
-        .modal-card { background: var(--panel); padding: 30px; border-radius: 12px; text-align: center; width: 100%; max-width: 400px; border: 1px solid #333; }
+        #setup-modal, #report-modal, #stats-modal, #coach-modal, #settings-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; overflow-y: auto; padding: 20px; box-sizing: border-box; }
+        .modal-card { background: var(--panel); padding: 30px; border-radius: 12px; text-align: center; width: 100%; max-width: 500px; border: 1px solid #333; }
         .modal-row { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
         select { background: #333; color: white; padding: 10px; border: 1px solid #555; border-radius: 6px; font-size: 1.1rem; width: 150px; }
         
@@ -85,6 +90,13 @@
         .hist-loss { border-left: 4px solid var(--danger); }
         .hist-date { font-size: 0.8rem; color: #666; display: block; }
         .hist-details { font-size: 0.9rem; color: white; }
+
+        .tabs { display:flex; gap:10px; margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px; }
+        .tab-btn { background:none; border:none; color:#888; font-size:1rem; cursor:pointer; padding:5px; }
+        .tab-btn.active { color:var(--primary); border-bottom:2px solid var(--primary); }
+        .pb-card { background: #2a2a2a; padding: 15px; border-radius: 8px; margin-bottom: 10px; text-align: left; display: flex; justify-content: space-between; align-items: center; }
+        .pb-title { font-weight: bold; color: #fff; }
+        .pb-val { color: var(--highlight); font-size: 1.2rem; font-weight: bold; }
 
         #cricket-board { display: none; width: 100%; max-width: 450px; margin-bottom: 10px; background: #222; border-radius: 8px; overflow: hidden; }
         .crick-row { display: flex; border-bottom: 1px solid #333; height: 35px; align-items: center; }
@@ -151,7 +163,15 @@
                 <option value="midnight" id="opt-mid" disabled>Midnight (Lvl 10)</option>
             </select>
         </div>
-        <button class="btn btn-primary" onclick="document.getElementById('settings-modal').style.display='none'">Close</button>
+        <div class="modal-row" style="margin-top:20px; border-top:1px solid #333; padding-top:20px;">
+            <span>Data Management</span>
+            <div style="display:flex; gap:10px;">
+                <button class="btn" style="padding:5px 10px; font-size:0.8rem;" onclick="Stats.exportData()">Save</button>
+                <button class="btn" style="padding:5px 10px; font-size:0.8rem; background:var(--highlight); color:black;" onclick="document.getElementById('import-file').click()">Load</button>
+            </div>
+            <input type="file" id="import-file" style="display:none" onchange="Stats.importData(this)">
+        </div>
+        <button class="btn btn-primary" style="margin-top:20px;" onclick="document.getElementById('settings-modal').style.display='none'">Close</button>
     </div>
 </div>
 
@@ -164,22 +184,38 @@
     </div>
 </div>
 
-<div id="history-modal">
-    <div class="modal-card" style="max-width: 500px;">
-        <h2>Career History</h2>
-        <div class="history-list" id="history-list"></div>
-        <button class="btn btn-primary" onclick="document.getElementById('history-modal').style.display='none'">Close</button>
+<div id="stats-modal">
+    <div class="modal-card" style="max-width: 600px;">
+        <h2>Career Stats Hub</h2>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="Stats.switchTab('history')">History</button>
+            <button class="tab-btn" onclick="Stats.switchTab('pbs')">Personal Bests</button>
+        </div>
+        <div id="tab-history" style="display:block;">
+            <div class="history-list" id="history-list"></div>
+        </div>
+        <div id="tab-pbs" style="display:none;">
+            <div class="pb-card"><span class="pb-title">Best X01 Avg</span><span class="pb-val" id="pb-avg">0.0</span></div>
+            <div class="pb-card"><span class="pb-title">Highest Checkout</span><span class="pb-val" id="pb-co">0</span></div>
+            <div class="pb-card"><span class="pb-title">Best Leg (Darts)</span><span class="pb-val" id="pb-leg">--</span></div>
+            <div class="pb-card"><span class="pb-title">Route 121 Best</span><span class="pb-val" id="pb-121">121</span></div>
+            <div class="pb-card"><span class="pb-title">Bob's 27 High Score</span><span class="pb-val" id="pb-bobs">0</span></div>
+            <div class="pb-card"><span class="pb-title">JDC High Score</span><span class="pb-val" id="pb-jdc">0</span></div>
+            <div class="pb-card"><span class="pb-title">RTC Best (Darts)</span><span class="pb-val" id="pb-rtc">--</span></div>
+            <div class="pb-card"><span class="pb-title">Cricket Best MPR</span><span class="pb-val" id="pb-crick">0.0</span></div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:10px;" onclick="document.getElementById('stats-modal').style.display='none'">Close</button>
         <button class="btn" style="margin-top:10px; background:#444;" onclick="Stats.exportData()">Download Data</button>
     </div>
 </div>
 
 <div id="screen-menu" class="screen active">
     <header>
-        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v17.5</span></h1>
+        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v19.2</span></h1>
         <div style="display:flex; gap:10px;">
             <div class="icon-btn" onclick="document.getElementById('settings-modal').style.display='flex'">⚙️</div>
             <div class="icon-btn" onclick="Coach.analyze()">🎓</div>
-            <div id="settings-btn" class="icon-btn" onclick="Stats.showHistory()">📊</div>
+            <div id="settings-btn" class="icon-btn" onclick="Stats.showHub()">📊</div>
         </div>
     </header>
     <div class="main-area">
@@ -199,9 +235,15 @@
             <div class="menu-card" style="grid-column: span 2; background: linear-gradient(135deg, #1e1e1e, #2c1e1e); border-color: var(--highlight);" onclick="app.startTournament()">
                 <span style="font-size:2rem">🏆</span><br><b style="color:var(--highlight)">TOURNAMENT</b><br><span style="font-size:0.8rem; color:#aaa">Win the Cup</span>
             </div>
+            
+            <div class="menu-card" style="background: linear-gradient(135deg, #1e1e1e, #004d40); border-color: var(--primary);" onclick="app.loadMode('route121')">
+                <span style="font-size:2rem">🛣️</span><br><b style="color:var(--primary)">ROUTE 121</b><br><span style="font-size:0.8rem; color:#aaa">Pro Practice</span>
+            </div>
+
             <div class="menu-card" style="background: linear-gradient(135deg, #1e1e1e, #1a237e); border-color: var(--secondary);" onclick="app.loadMode('finisher')">
                 <span style="font-size:2rem">☠️</span><br><b style="color:var(--secondary)">THE FINISHER</b><br><span style="font-size:0.8rem; color:#aaa">Pressure Checkout</span>
             </div>
+            
             <div class="menu-card" onclick="app.openSetup('league')">
                 <span class="rank-badge" id="league-rank">ROOKIE</span><span style="font-size:2rem">🏅</span><br><b>Bot League</b><br><span style="font-size:0.8rem; color:#888">Single Match</span>
             </div>
@@ -229,6 +271,7 @@
     <header>
         <h1 id="game-title">Game</h1>
         <div style="display:flex; gap:10px; align-items:center;">
+            <div class="icon-btn" onclick="app.toggleCam()" style="font-size:1.2rem">📷</div>
             <div id="input-toggle" class="icon-btn" onclick="app.toggleInput()">🎯</div>
             <div id="mic-toggle-game" class="icon-btn" onclick="Voice.toggle()">🎙️</div>
             <div id="restart-game" class="icon-btn" onclick="app.resetLeg()">↺</div>
@@ -238,6 +281,8 @@
     <div class="main-area">
         <div id="max-overlay"><div class="max-text">180!</div></div>
         
+        <div id="cam-container"><video id="cam-feed" autoplay playsinline></video></div>
+
         <div class="hud-panel" id="main-hud">
             <div class="hud-score-box" id="p1-box" onclick="app.renameUser()">
                 <div class="hud-label" id="hud-lbl-1">YOU</div>
@@ -276,7 +321,7 @@
 </div>
 
 <script>
-// --- CORE UTILS (LOADED FIRST) ---
+// --- CORE UTILS ---
 const FX = {
     canvas: null, ctx: null, particles: [],
     init: function() {
@@ -391,7 +436,6 @@ const Voice = {
     }
 };
 
-// --- CONFIG ---
 const BOTS = [
     { name: "Pub Rookie", avg: 35, checkout: 0.1 },
     { name: "Local Champ", avg: 45, checkout: 0.2 },
@@ -451,24 +495,47 @@ const Strategist = {
     }
 };
 
-// --- STATS ---
+// --- STATS SYSTEM ---
 const Stats = {
-    data: { matches: [], leagueRank: 0, drillLevel: 0, heatmap: [], userName: "YOU", bestLeg: 999, highOut: 0, xp: 0, level: 1, theme: "default" },
+    data: { 
+        matches: [], 
+        records: { bobs: 0, rtc: 999, jdc: 0, cricket: 0, route121: 121 },
+        leagueRank: 0, drillLevel: 0, heatmap: [], userName: "YOU", bestLeg: 999, highOut: 0, xp: 0, level: 1, theme: "default" 
+    },
     load: function() {
         try {
-            const e = localStorage.getItem("darts_v17");
+            const e = localStorage.getItem("darts_v19");
             if (e) this.data = JSON.parse(e);
+            if(!this.data.records) this.data.records = { bobs: 0, rtc: 999, jdc: 0, cricket: 0, route121: 121 };
+            if(!this.data.records.route121) this.data.records.route121 = 121;
             if(!this.data.xp) this.data.xp = 0;
             if(!this.data.level) this.data.level = 1;
-            if(!this.data.theme) this.data.theme = "default";
-            if(!this.data.bestLeg) this.data.bestLeg = 999;
             this.applyTheme();
         } catch(e) {}
         this.renderChart(); this.updateBadges(); this.renderXP();
     },
-    save: function() { localStorage.setItem("darts_v17", JSON.stringify(this.data)) },
+    save: function() { localStorage.setItem("darts_v19", JSON.stringify(this.data)) },
     setName: function(n) { this.data.userName = n; this.save(); },
     
+    // IMPORT DATA
+    importData: function(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (imported.xp !== undefined && imported.matches) {
+                    if(confirm("Overwrite current career with this backup?")) {
+                        localStorage.setItem("darts_v19", JSON.stringify(imported)); 
+                        location.reload();
+                    }
+                } else { alert("Invalid backup file."); }
+            } catch (err) { alert("Error reading file."); }
+        };
+        reader.readAsText(file);
+    },
+
     addXP: function(amount) {
         this.data.xp += amount;
         const nextLvl = this.data.level * 500;
@@ -517,6 +584,28 @@ const Stats = {
         if(res === "W") this.addXP(100); else this.addXP(20);
         this.save();
     },
+    
+    // UNIVERSAL STAT SAVER
+    addResult: function(type, score, details) {
+        this.data.matches.push({
+            date: new Date().toLocaleDateString(),
+            type: type,
+            avg: score, 
+            result: "N/A",
+            opponent: details || "Drill",
+            checkoutPerc: 0
+        });
+        
+        if(type === 'bobs' && score > this.data.records.bobs) this.data.records.bobs = score;
+        if(type === 'jdc' && score > this.data.records.jdc) this.data.records.jdc = score;
+        if(type === 'rtc' && score < this.data.records.rtc) this.data.records.rtc = score;
+        if(type === 'route121' && score > this.data.records.route121) this.data.records.route121 = score;
+        
+        if (this.data.matches.length > 50) this.data.matches.shift();
+        this.addXP(30); 
+        this.save();
+    },
+
     updateRecords: function(darts, checkout) {
         if (darts >= 6 && darts < this.data.bestLeg) this.data.bestLeg = darts;
         if (checkout > this.data.highOut) this.data.highOut = checkout;
@@ -528,21 +617,62 @@ const Stats = {
         this.save();
     },
     updateLeague: function(e) { if(e === this.data.leagueRank){ this.data.leagueRank++; this.save(); } },
+    
+    showHub: function() {
+        document.getElementById("stats-modal").style.display = "flex";
+        this.switchTab('history');
+    },
+    switchTab: function(tab) {
+        document.getElementById("tab-history").style.display = tab === 'history' ? 'block' : 'none';
+        document.getElementById("tab-pbs").style.display = tab === 'pbs' ? 'block' : 'none';
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        event.target.classList.add("active");
+        
+        if(tab === 'history') this.showHistory();
+        if(tab === 'pbs') this.showPBs();
+    },
+    showPBs: function() {
+        document.getElementById("pb-avg").innerText = "Check Chart";
+        document.getElementById("pb-co").innerText = this.data.highOut;
+        document.getElementById("pb-leg").innerText = this.data.bestLeg === 999 ? "--" : this.data.bestLeg;
+        document.getElementById("pb-121").innerText = this.data.records.route121;
+        document.getElementById("pb-bobs").innerText = this.data.records.bobs;
+        document.getElementById("pb-jdc").innerText = this.data.records.jdc;
+        document.getElementById("pb-rtc").innerText = this.data.records.rtc === 999 ? "--" : this.data.records.rtc;
+    },
     showHistory: function() {
         const list = document.getElementById("history-list");
         if(!list) return;
         list.innerHTML = "";
         [...this.data.matches].reverse().forEach(m => {
-            const cls = m.result === "W" ? "hist-win" : "hist-loss";
-            list.innerHTML += `<div class="hist-row ${cls}"><div><span class="hist-date">${m.date} vs ${m.opponent}</span><div class="hist-details">Avg: ${m.avg} | Checkout: ${m.checkoutPerc}%</div></div><div style="font-weight:bold;font-size:1.2rem;">${m.result}</div></div>`;
+            let label = "";
+            let val = "";
+            let cls = "";
+            
+            if(m.type === 'x01') {
+                cls = m.result === "W" ? "hist-win" : "hist-loss";
+                label = `Vs ${m.opponent}`;
+                val = `Avg: ${m.avg}`;
+            } else if (m.type === 'bobs') {
+                cls = "hist-win"; label = "Bob's 27"; val = `Score: ${m.avg}`;
+            } else if (m.type === 'rtc') {
+                cls = "hist-win"; label = "Round The Clock"; val = `Darts: ${m.avg}`;
+            } else if (m.type === 'jdc') {
+                cls = "hist-win"; label = "JDC Drill"; val = `Score: ${m.avg}`;
+            } else if (m.type === 'route121') {
+                cls = "hist-win"; label = "Route 121"; val = `Reached: ${m.avg}`;
+            } else {
+                cls = "hist-win"; label = m.type; val = m.avg;
+            }
+            
+            list.innerHTML += `<div class="hist-row ${cls}"><div><span class="hist-date">${m.date} - ${label}</span></div><div style="font-weight:bold;">${val}</div></div>`;
         });
-        document.getElementById("history-modal").style.display = "flex";
     },
     exportData: function() {
         const e = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data));
         const t = document.createElement("a"); t.href = e; t.download = "dartsos_backup.json"; document.body.appendChild(t); t.click(); t.remove();
     },
-    clear: function() { if(confirm("Reset all data?")) { localStorage.removeItem("darts_v17"); location.reload(); } },
+    clear: function() { if(confirm("Reset all data?")) { localStorage.removeItem("darts_v19"); location.reload(); } },
     renderChart: function() {
         const e = document.getElementById("chart-area");
         if(!e) return;
@@ -560,38 +690,6 @@ const Stats = {
         const e = ["ROOKIE", "AMATEUR", "SEMI-PRO", "PRO", "ELITE"];
         const badge = document.getElementById("league-rank");
         if(badge) badge.innerText = e[Math.min(4, this.data.leagueRank)];
-    }
-};
-
-// --- COACH ---
-const Coach = {
-    analyze: function() {
-        const m = Stats.data.matches;
-        const heat = Stats.data.heatmap;
-        const box = document.getElementById("coach-content");
-        document.getElementById("coach-modal").style.display = "flex";
-
-        if(m.length < 3) { box.innerHTML = "I need more data! Play at least 3 matches."; return; }
-
-        let driftMsg = "Your grouping is centered.";
-        if(heat.length > 10) {
-            let sumX = 0; heat.forEach(p => sumX += p.x); const avgX = sumX / heat.length;
-            if(avgX < 240) driftMsg = "You are drifting left (into the 5s). Check your elbow alignment.";
-            if(avgX > 260) driftMsg = "You are drifting right (into the 1s). You might be snatching the dart.";
-        }
-
-        const last5 = m.slice(-5);
-        const avg = last5.reduce((a,b)=>a+b.avg,0)/last5.length;
-        let doubleSum = 0, doubleCount = 0;
-        last5.forEach(x => { if(x.checkoutPerc > 0) { doubleSum+=x.checkoutPerc; doubleCount++; } });
-        const dblPerc = doubleCount > 0 ? doubleSum/doubleCount : 0;
-
-        let advice = "", rec = "";
-        if(dblPerc < 15) { advice = "Missed doubles are killing your game."; rec = "RECOMMENDATION: Play 'Bob's 27'."; }
-        else if (avg < 40) { advice = "We need to build scoring consistency."; rec = "RECOMMENDATION: Play 'Round The Clock'."; }
-        else { advice = "You are playing well!"; rec = "RECOMMENDATION: Try 'JDC Academy'."; }
-
-        box.innerHTML = `<b>Recent Form:</b> Avg ${avg.toFixed(1)} | Doubles ${Math.round(dblPerc)}%<br><br>${driftMsg}<br><br>${advice}<span class="coach-rec">${rec}</span>`;
     }
 };
 
@@ -659,8 +757,27 @@ const app = {
         document.getElementById("screen-menu").classList.add("active");
         document.getElementById("report-modal").style.display = "none";
         this.tournament.active = false;
+        // Turn off camera
+        const v = document.getElementById("cam-feed");
+        if(v.srcObject) v.srcObject.getTracks().forEach(t=>t.stop());
+        document.getElementById("cam-container").classList.remove("active");
+        
         Stats.load();
     },
+    
+    toggleCam: function() {
+        const c = document.getElementById("cam-container");
+        const v = document.getElementById("cam-feed");
+        if(c.classList.contains("active")) {
+            if(v.srcObject) v.srcObject.getTracks().forEach(t=>t.stop());
+            c.classList.remove("active");
+        } else {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(s => { v.srcObject = s; c.classList.add("active"); })
+                .catch(e => alert("Camera error: " + e));
+        }
+    },
+
     openSetup: function(mode) {
         this.mode = mode;
         this.tournament.active = false;
@@ -785,13 +902,16 @@ const app = {
         if (isNaN(e) || e > 180) { alert("Invalid"); this.numpadClear(); return; }
         if (this.mode === "league" || this.mode === "pvp") { this.state.dartsInTurn = 3; this.logicX01(e, "S", true); }
         else if (this.mode === "finisher") { this.logicFinisher(e, "S", true); }
+        else if (this.mode === "route121") { this.logicRoute121(e, "S", true); }
         this.numpadClear();
     },
     loadMode: function(e) {
         this.mode = e;
         const startS = this.settings.score || 501;
         this.state = {
-            score: startS, p2Score: startS, startScore: startS, currentPlayer: 1, dartsInTurn: 0, turnScore: 0,
+            score: startS, p2Score: startS, startScore: startS, 
+            currentPlayer: 1, starter: 1, 
+            dartsInTurn: 0, turnScore: 0,
             legDarts: 0,
             matchScore: [0, 0], matchTotalScore: 0, matchTotalDarts: 0,
             matchMissedDoubles: 0, matchHitDoubles: 0,
@@ -799,7 +919,10 @@ const app = {
             finisherLives: 3, finisherTarget: 0,
             targetList: [], targetIndex: 0, jdcLevel: 0, jdcScore: 0, rtcTarget: 1, rtcHits: 0,
             cricket: { 1: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, 2: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, s1:0, s2:0 },
-            throwLog: [], trainerTarget: 0, trainerAttempts: 0
+            throwLog: [], trainerTarget: 0, trainerAttempts: 0,
+            
+            // ROUTE 121 VARS
+            r121_target: 121, r121_dartsLeft: 9, r121_current: 121
         };
         this.historyStack = []; this.markerList = [];
         
@@ -825,6 +948,7 @@ const app = {
         else if (e === "cricket") this.setupCricket();
         else if (e === "train_out") this.setupTrainer();
         else if (e === "finisher") this.setupFinisher();
+        else if (e === "route121") this.setupRoute121();
     },
     setupLeague: function() {
         const i = this.settings.botIdx !== undefined ? this.settings.botIdx : Math.min(4, Stats.data.leagueRank);
@@ -908,6 +1032,26 @@ const app = {
         document.getElementById("hud-val-1").innerText = this.state.finisherLives;
         document.getElementById("checkout-display").innerText = Strategist.getCheckout(this.state.score);
     },
+    
+    // --- ROUTE 121 SETUP ---
+    setupRoute121: function() {
+        document.getElementById("game-title").innerText = "Route 121";
+        document.getElementById("hud-lbl-1").innerText = "DARTS LEFT"; document.getElementById("hud-val-1").innerText = "9";
+        document.getElementById("p2-box").style.visibility = "visible";
+        document.getElementById("hud-lbl-2").innerText = "TARGET";
+        
+        this.state.r121_target = 121;
+        this.state.r121_dartsLeft = 9;
+        this.state.r121_current = 121; // Current score for the leg
+        this.updateRoute121UI();
+    },
+    updateRoute121UI: function() {
+        document.getElementById("hud-val-2").innerText = this.state.r121_target; // Target (121, 122...)
+        document.getElementById("hud-val-1").innerText = this.state.r121_dartsLeft; // Darts Left (9, 8...)
+        document.getElementById("checkout-display").innerText = Strategist.getCheckout(this.state.r121_current);
+        // Also update standard score box so hitting works
+        this.state.score = this.state.r121_current; 
+    },
 
     handleHit: function(val, type, e) {
         if (e) {
@@ -936,6 +1080,56 @@ const app = {
         else if (this.mode==="jdc") this.logicJDC(val, type);
         else if (this.mode==="train_out") this.logicTrainer(n, type);
         else if (this.mode==="finisher") this.logicFinisher(n, type);
+        else if (this.mode==="route121") this.logicRoute121(n, type);
+    },
+    
+    // --- ROUTE 121 LOGIC ---
+    logicRoute121: function(pts, type, isManual) {
+        this.state.r121_dartsLeft--;
+        const left = this.state.r121_current - pts;
+        
+        // WIN (Checkout)
+        if (left === 0 && (type === "D" || isManual)) {
+            Speaker.speak("Yes!", 100); Stats.addXP(50);
+            
+            // Record if it's a new PB
+            Stats.addResult('route121', this.state.r121_target, "Route 121");
+            
+            alert("Checked out! Moving to " + (this.state.r121_target + 1));
+            this.state.r121_target++;
+            this.state.r121_current = this.state.r121_target;
+            this.state.r121_dartsLeft = 9; // Reset darts
+            this.markerList = []; BoardRenderer.render(this.handleHit.bind(this), false);
+            this.updateRoute121UI();
+            return;
+        }
+        
+        // BUST
+        if (left <= 1 && left !== 0) {
+            Speaker.speak("Bust", 0);
+            // Reset to start of this target for remaining darts? No, usually reset current score to target
+            this.state.r121_current = this.state.r121_target;
+        } else {
+            this.state.r121_current = left;
+            Speaker.speak(String(pts), 0);
+        }
+        
+        // FAIL (Out of darts)
+        if (this.state.r121_dartsLeft <= 0) {
+            alert("Failed! Dropping to safe haven.");
+            // Safe Havens logic: 121, 130, 140, 150, 160
+            if (this.state.r121_target >= 160) this.state.r121_target = 160;
+            else if (this.state.r121_target >= 150) this.state.r121_target = 150;
+            else if (this.state.r121_target >= 140) this.state.r121_target = 140;
+            else if (this.state.r121_target >= 130) this.state.r121_target = 130;
+            else this.state.r121_target = 121;
+            
+            this.state.r121_current = this.state.r121_target;
+            this.state.r121_dartsLeft = 9;
+            this.markerList = []; BoardRenderer.render(this.handleHit.bind(this), false);
+        }
+        
+        this.updateRoute121UI();
     },
     
     logicRTC: function(val, type) {
@@ -946,7 +1140,11 @@ const app = {
         if (hit) {
             Speaker.speak("Yes", 60); this.state.rtcHits++;
             if (this.state.rtcTarget === 20) this.state.rtcTarget = 25;
-            else if (this.state.rtcTarget === 25) { Stats.addXP(50); alert(`Done! ${Math.round(21/this.state.matchTotalDarts*100)}% acc.`); this.goHome(); return; }
+            else if (this.state.rtcTarget === 25) { 
+                Stats.addResult('rtc', this.state.matchTotalDarts, "Round The Clock");
+                alert(`Done! ${Math.round(21/this.state.matchTotalDarts*100)}% acc.`); 
+                this.goHome(); return; 
+            }
             else this.state.rtcTarget++;
             this.markerList = []; BoardRenderer.render(this.handleHit.bind(this), false, this.markerList);
             document.getElementById("hud-val-2").innerText = this.state.rtcTarget === 25 ? "Bull" : this.state.rtcTarget;
@@ -1060,19 +1258,49 @@ const app = {
         const goal = Math.ceil(this.settings.legs / 2);
         if (this.state.matchScore[0] >= goal || this.state.matchScore[1] >= goal) {
             if (this.mode === "league" && this.state.matchScore[0] >= goal) Stats.updateLeague(this.state.botIdx);
-            const avg = this.state.matchTotalDarts > 0 ? (this.state.matchTotalScore / this.state.matchTotalDarts * 3).toFixed(1) : "0.0";
+            
+            // MATH FIX: Calculate global average
+            const avg = this.state.matchTotalDarts > 0 
+                ? (this.state.matchTotalScore / this.state.matchTotalDarts * 3).toFixed(1) 
+                : "0.0";
+            
+            // Add match result to detailed stats
             Stats.addMatch(avg, this.state.matchScore[0] >= goal ? "W":"L", this.state.matchHitDoubles, this.state.matchMissedDoubles);
             app.showReport(this.state.matchScore[0] >= goal, avg);
         } else { alert(`Leg Over. ${this.state.matchScore[0]} - ${this.state.matchScore[1]}`); this.resetLeg(); }
     },
     resetLeg: function() {
+        // --- NEW: ALTERNATING STARTS ---
+        this.state.starter = this.state.starter === 1 ? 2 : 1;
+        this.state.currentPlayer = this.state.starter;
+        
         this.state.score = this.state.startScore; this.state.p2Score = this.state.startScore;
         this.state.dartsInTurn = 0; this.state.turnScore = 0; this.state.legDarts = 0; 
         this.state.cricket = { 1: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, 2: {20:0,19:0,18:0,17:0,16:0,15:0,25:0}, s1:0, s2:0 };
         this.markerList = []; BoardRenderer.render(this.handleHit.bind(this)); this.updateUI();
+        
+        if(this.state.starter === 2 && this.mode === 'league') {
+            setTimeout(() => this.botThrow(), 1000);
+        } else {
+            Speaker.speak("Game On", 0);
+        }
     },
+    botThrow: function() {
+        document.getElementById("status-msg").innerText="Opponent throwing...";
+        const e=BOTS[this.state.botIdx];
+        setTimeout((()=>{
+            const t=Math.floor(20*Math.random())-10; let o=e.avg+t;
+            if(this.state.p2Score-o<=1){if(Math.random()<e.checkout){this.state.matchScore[1]++;this.checkMatchWin();return}else o=0;}
+            this.state.p2Score-=o; Speaker.speak("Bot "+o,o); this.updateUI();
+            this.state.dartsInTurn=0; this.state.turnScore=0; this.state.throwLog=[]; this.markerList=[];
+            this.state.currentPlayer = 1; this.updateUI();
+            document.getElementById("status-msg").innerText="Your Turn";
+            BoardRenderer.render(this.handleHit.bind(this));
+        }),1000);
+    },
+
     updateUI: function() {
-        if(this.mode==="train_out" || this.mode==="finisher") return;
+        if(this.mode==="train_out" || this.mode==="finisher" || this.mode === "route121") return;
         document.getElementById("hud-val-1").innerText = this.state.score;
         document.getElementById("hud-val-2").innerText = this.state.p2Score;
         document.getElementById("match-score-display").innerText = `${this.state.matchScore[0]} - ${this.state.matchScore[1]}`;
@@ -1104,7 +1332,10 @@ const app = {
             this.state.dartsInTurn = 0; this.state.jdcLevel++;
             document.getElementById("checkout-display").innerText = "Dart 1/3";
             BoardRenderer.render(this.handleHit.bind(this)); 
-            if (this.state.jdcLevel > 12) { Stats.addXP(50); alert("JDC Finished! Score: " + this.state.score); this.goHome(); return; }
+            if (this.state.jdcLevel > 12) { 
+                Stats.addResult('jdc', this.state.score, "JDC Academy");
+                alert("JDC Finished! Score: " + this.state.score); this.goHome(); return; 
+            }
             let txt = "";
             if (this.state.jdcLevel < 6) txt = "Double " + (10 + this.state.jdcLevel);
             else if (this.state.jdcLevel < 12) txt = "Treble " + (15 + (this.state.jdcLevel - 6));
@@ -1116,6 +1347,7 @@ const app = {
     handleAction: function() {
         if(this.mode==="train_out") { this.newTrainerTarget(); return; }
         if(this.mode==="finisher") { alert("No skip in Finisher!"); return; }
+        if(this.mode==="route121") { alert("No skip in Route 121!"); return; }
         if("cricket"===this.mode||"pvp"===this.mode){
             if(0===this.state.dartsInTurn&&"board"===this.inputMode)return;
             this.state.currentPlayer=1===this.state.currentPlayer?2:1;
@@ -1125,16 +1357,13 @@ const app = {
         }
         else if ("league"===this.mode) {
             if(0===this.state.dartsInTurn&&"board"===this.inputMode)return;
-            document.getElementById("status-msg").innerText="Opponent throwing...";
-            const e=BOTS[this.state.botIdx];
-            setTimeout((()=>{
-                const t=Math.floor(20*Math.random())-10; let o=e.avg+t;
-                if(this.state.p2Score-o<=1){if(Math.random()<e.checkout){this.state.matchScore[1]++;this.checkMatchWin();return}else o=0;}
-                this.state.p2Score-=o; Speaker.speak("Bot "+o,o); this.updateUI();
-                this.state.dartsInTurn=0; this.state.turnScore=0; this.state.throwLog=[]; this.markerList=[];
-                document.getElementById("status-msg").innerText="Your Turn";
-                BoardRenderer.render(this.handleHit.bind(this));
-            }),1e3);
+            
+            // --- FIX: REMOVED DUPLICATE STATS CHECK ---
+            // The stats are now fully handled inside logicX01() when the 3rd dart hits.
+            // This prevents double counting when clicking "Next Round".
+            
+            // Trigger Bot
+            this.botThrow();
         } else if ("bobs27"===this.mode) {
             if(0===this.state.turnScore){
                 const t=this.state.targetList[this.state.targetIndex]; const pen=t===25?25:t*2;
@@ -1142,7 +1371,10 @@ const app = {
             }
             if(this.state.score<0){alert("BUST!");this.goHome();return}
             this.state.targetIndex++;
-            if(this.state.targetIndex>=this.state.targetList.length){ Stats.addXP(50); alert("Finished! Score: "+this.state.score);this.goHome();return}
+            if(this.state.targetIndex>=this.state.targetList.length){ 
+                Stats.addResult('bobs', this.state.score, "Bob's 27");
+                alert("Finished! Score: "+this.state.score);this.goHome();return
+            }
             const next=this.state.targetList[this.state.targetIndex];
             document.getElementById("hud-val-1").innerText=this.state.score;
             document.getElementById("hud-val-2").innerText=next===25?"Bull":"D"+next;
