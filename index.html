@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>DartsOS v21.0: Premier League & Ghosts</title>
+    <title>DartsOS v23.1: Bug Fixes</title>
     <style>
         :root {
             --bg: #121212; --panel: #1e1e1e; --primary: #00e676; --secondary: #2979ff; --danger: #ff1744;
@@ -71,7 +71,7 @@
         .btn-miss { background: #424242; color: #ff5252; border: 1px solid #ff5252; flex: 0.4; }
         .rank-badge { background: var(--highlight); color: black; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; position: absolute; top: 10px; right: 10px; }
         
-        #setup-modal, #report-modal, #stats-modal, #coach-modal, #settings-modal, #scenario-modal, #players-modal, #pl-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; overflow-y: auto; padding: 20px; box-sizing: border-box; }
+        #setup-modal, #report-modal, #stats-modal, #coach-modal, #settings-modal, #scenario-modal, #players-modal, #pl-modal, #trophy-modal, #wc-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; overflow-y: auto; padding: 20px; box-sizing: border-box; }
         .modal-card { background: var(--panel); padding: 30px; border-radius: 12px; text-align: center; width: 100%; max-width: 500px; border: 1px solid #333; }
         .modal-row { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
         select, input[type="text"], textarea { background: #333; color: white; padding: 10px; border: 1px solid #555; border-radius: 6px; font-size: 1.1rem; width: 100%; box-sizing: border-box; }
@@ -122,6 +122,15 @@
         .pl-table th { background:#333; padding:8px; color:#aaa; }
         .pl-table td { padding:8px; border-bottom:1px solid #333; }
         .pl-table tr.user-row { background: rgba(0, 230, 118, 0.1); font-weight:bold; color:var(--primary); }
+
+        /* TROPHIES */
+        .trophy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-height: 300px; overflow-y: auto; }
+        .trophy-card { background: #222; border: 1px solid #333; border-radius: 8px; padding: 10px; text-align: center; opacity: 0.5; filter: grayscale(1); transition: all 0.3s; }
+        .trophy-card.unlocked { opacity: 1; filter: grayscale(0); border-color: var(--highlight); background: #332a00; }
+        .trophy-icon { font-size: 2rem; display: block; margin-bottom: 5px; }
+        .trophy-name { font-size: 0.8rem; font-weight: bold; color: #fff; }
+        .trophy-desc { font-size: 0.7rem; color: #aaa; display: none; }
+        .trophy-card:hover .trophy-desc { display: block; }
     </style>
 </head>
 <body>
@@ -188,16 +197,35 @@
             <span id="pl-week" style="color:var(--highlight); font-weight:bold;">Week 1</span>
             <span style="color:#aaa; font-size:0.8rem;">Best of 12 (First to 7)</span>
         </div>
-        
         <table class="pl-table">
             <thead><tr><th>#</th><th>Name</th><th>P</th><th>W</th><th>D</th><th>L</th><th>+/-</th><th>Pts</th></tr></thead>
             <tbody id="pl-body"></tbody>
         </table>
-        
         <div id="pl-actions">
             <button class="btn btn-primary" onclick="app.playLeagueMatch()">Play Next Match</button>
         </div>
         <button class="btn" style="margin-top:10px;" onclick="document.getElementById('pl-modal').style.display='none'">Close</button>
+    </div>
+</div>
+
+<div id="wc-modal">
+    <div class="modal-card">
+        <h2 style="color:gold;">🌍 World Championship</h2>
+        <div style="background:#222; padding:15px; border-radius:8px; margin-bottom:20px;">
+            <h3 id="wc-round-title" style="margin:0;">Round 1 (Last 32)</h3>
+            <p style="color:#aaa; font-size:0.9rem;">Set Play: First to <span id="wc-sets-req">3</span> Sets</p>
+        </div>
+        <div id="wc-bracket-info" style="text-align:left; color:#ccc; margin-bottom:20px; font-size:0.9rem;"></div>
+        <button class="btn btn-primary" onclick="app.playWCMatch()">Play Match</button>
+        <button class="btn" style="margin-top:10px;" onclick="document.getElementById('wc-modal').style.display='none'">Close</button>
+    </div>
+</div>
+
+<div id="trophy-modal">
+    <div class="modal-card" style="max-width:600px;">
+        <h2>🏆 Trophy Cabinet</h2>
+        <div class="trophy-grid" id="trophy-list"></div>
+        <button class="btn" style="margin-top:10px;" onclick="document.getElementById('trophy-modal').style.display='none'">Close</button>
     </div>
 </div>
 
@@ -259,11 +287,10 @@
         <h2>Career Stats Hub</h2>
         <div class="tabs">
             <button class="tab-btn active" onclick="Stats.switchTab('history')">History</button>
-            <button class="tab-btn" onclick="Stats.switchTab('pbs')">Personal Bests</button>
+            <button class="tab-btn" onclick="Stats.switchTab('pbs')">PBs</button>
+            <button class="tab-btn" onclick="Stats.switchTab('rivals')">Rivals</button>
         </div>
-        <div id="tab-history" style="display:block;">
-            <div class="history-list" id="history-list"></div>
-        </div>
+        <div id="tab-history" style="display:block;"><div class="history-list" id="history-list"></div></div>
         <div id="tab-pbs" style="display:none;">
             <div class="pb-card"><span class="pb-title">Best X01 Avg</span><span class="pb-val" id="pb-avg">0.0</span></div>
             <div class="pb-card"><span class="pb-title">Highest Checkout</span><span class="pb-val" id="pb-co">0</span></div>
@@ -274,15 +301,16 @@
             <div class="pb-card"><span class="pb-title">RTC Best (Darts)</span><span class="pb-val" id="pb-rtc">--</span></div>
             <div class="pb-card"><span class="pb-title">Cricket Best MPR</span><span class="pb-val" id="pb-crick">0.0</span></div>
         </div>
+        <div id="tab-rivals" style="display:none;"><div id="rivals-list" class="history-list"></div></div>
         <button class="btn btn-primary" style="margin-top:10px;" onclick="document.getElementById('stats-modal').style.display='none'">Close</button>
-        <button class="btn" style="margin-top:10px; background:#444;" onclick="Stats.exportData()">Download Data</button>
     </div>
 </div>
 
 <div id="screen-menu" class="screen active">
     <header>
-        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v21.0</span></h1>
+        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v23.1</span></h1>
         <div style="display:flex; gap:10px;">
+            <div class="icon-btn" onclick="document.getElementById('trophy-modal').style.display='flex'; Stats.renderTrophies()">🏆</div>
             <div class="icon-btn" onclick="document.getElementById('settings-modal').style.display='flex'">⚙️</div>
             <div class="icon-btn" onclick="Coach.analyze()">🎓</div>
             <div id="settings-btn" class="icon-btn" onclick="Stats.showHub()">📊</div>
@@ -307,8 +335,16 @@
         </div>
 
         <div class="menu-grid">
+            <div class="menu-card" style="grid-column: span 2; background: linear-gradient(135deg, #1e1e1e, #ffd700); border-color: var(--highlight); color:black;" onclick="app.openWC()">
+                <span style="font-size:2rem">🌍</span><br><b>WORLD CHAMPIONSHIP</b><br><span style="font-size:0.8rem;">Set Play Format</span>
+            </div>
+
             <div class="menu-card" style="grid-column: span 2; background: linear-gradient(135deg, #1e1e1e, #2c1e1e); border-color: var(--highlight);" onclick="app.openPL()">
                 <span style="font-size:2rem">🏆</span><br><b style="color:var(--highlight)">PREMIER LEAGUE</b><br><span style="font-size:0.8rem; color:#aaa">Full Season</span>
+            </div>
+            
+            <div class="menu-card" style="grid-column: span 2; background: linear-gradient(135deg, #1e1e1e, #ff6f00); border-color: var(--highlight);" onclick="app.openScenarios()">
+                <span style="font-size:2rem">📜</span><br><b style="color:var(--highlight)">MOMENTS OF GLORY</b><br><span style="font-size:0.8rem; color:#aaa">Recreate History</span>
             </div>
             
             <div class="menu-card" style="background: linear-gradient(135deg, #1e1e1e, #004d40); border-color: var(--primary);" onclick="app.loadMode('route121')">
@@ -319,6 +355,10 @@
                 <span style="font-size:2rem">👻</span><br><b style="color:var(--secondary)">GHOST RIVALS</b><br><span style="font-size:0.8rem; color:#aaa">Load Replay</span>
             </div>
             
+            <div class="menu-card" onclick="app.startTournament()">
+                <span style="font-size:2rem">🛡️</span><br><b>Tournament</b>
+            </div>
+
             <div class="menu-card" onclick="app.openSetup('league')">
                 <span class="rank-badge" id="league-rank">ROOKIE</span><span style="font-size:2rem">🏅</span><br><b>Bot League</b>
             </div>
@@ -336,9 +376,6 @@
             </div>
             <div class="menu-card" onclick="app.loadMode('train_out')">
                 <span style="font-size:2rem">🎯</span><br><b>Trainer</b>
-            </div>
-            <div class="menu-card" onclick="app.openScenarios()">
-                <span style="font-size:2rem">📜</span><br><b>Scenarios</b>
             </div>
             <div class="menu-card" onclick="app.loadMode('finisher')">
                 <span style="font-size:2rem">☠️</span><br><b>Finisher</b>
@@ -416,7 +453,6 @@ const Speaker={speak:function(e,t){if(!window.speechSynthesis)return;window.spee
 const Voice={recognition:null,isListening:!1,init:function(){if(window.webkitSpeechRecognition){this.recognition=new window.webkitSpeechRecognition;this.recognition.continuous=!0;this.recognition.lang="en-US";this.recognition.onresult=e=>this.processCommand(e.results[e.results.length-1][0].transcript);this.recognition.onend=()=>{if(this.isListening)this.recognition.start()}}},toggle:function(){if(!this.recognition)this.init();if(!this.recognition)return alert("Voice not supported");this.isListening?(this.recognition.stop(),this.isListening=!1):(this.recognition.start(),this.isListening=!0);const e=this.isListening?"icon-btn listening":"icon-btn",t=document.getElementById("mic-toggle-game");if(t)t.className=e},processCommand:function(e){const t=e.toLowerCase().trim();if(t.includes("next"))return app.handleAction();let n="S";t.includes("double")&&(n="D");t.includes("triple")&&(n="T");let i=0;if(t.includes("bull"))i=50;else if(t.includes("25"))i=25;else{const e=t.match(/(\d+)/);e&&(i=parseInt(e[0]))}i>0&&i<=50&&(50===i&&(i=25,n="D"),app.handleHit(i,n))}};
 
 const BOTS=[{name:"Pub Rookie",avg:35,checkout:.1},{name:"Local Champ",avg:45,checkout:.2},{name:"County Player",avg:55,checkout:.4},{name:"Semi-Pro",avg:70,checkout:.6},{name:"The Iceman",avg:95,checkout:.9}];
-// PREMIER LEAGUE ROSTER
 const PL_BOTS = [
     {name:"YOU", p:0, w:0, d:0, l:0, pd:0, pts:0},
     {name:"MvG", p:0, w:0, d:0, l:0, pd:0, pts:0},
@@ -428,6 +464,22 @@ const PL_BOTS = [
     {name:"Cross", p:0, w:0, d:0, l:0, pd:0, pts:0}
 ];
 
+// --- TROPHIES ---
+const TROPHIES = [
+    { id: 't_sniper', name: 'Sniper', desc: 'Hit Double 1 three times in a match', icon: '🎯' },
+    { id: 't_bigfish', name: 'Big Fish', desc: 'Checkout 170', icon: '🐟' },
+    { id: 't_marathon', name: 'Marathon Man', desc: 'Play 50 matches', icon: '🏃' },
+    { id: 't_invincible', name: 'Invincible', desc: 'Win a Tournament without losing a Set', icon: '🛡️' },
+    { id: 't_robin', name: 'Robin Hood', desc: 'Hit a 180', icon: '🏹' },
+    { id: 't_champ', name: 'World Champ', desc: 'Win the World Championship', icon: '🌍' },
+    { id: 't_pl', name: 'PL Winner', desc: 'Win the Premier League', icon: '🏆' },
+    { id: 't_routeman', name: 'Route Master', desc: 'Reach 150 in Route 121', icon: '🛣️' },
+    { id: 't_perfect', name: 'Perfection', desc: '9 Dart Leg', icon: '💎' },
+    { id: 't_century', name: 'Centurion', desc: 'Checkout 100+', icon: '💯' },
+    { id: 't_27', name: 'Bob\'s Master', desc: 'Score 300+ in Bob\'s 27', icon: '💊' },
+    { id: 't_coach', name: 'Student', desc: 'Use the Coach', icon: '🎓' }
+];
+
 const Strategist={preferred:[20,16,10,8,4,25],solve:function(e,t){if(e>170||e<2||[169,168,166,165,163,162,159].includes(e))return null;if(50===e)return"Bull";if(e<=40&&e%2==0)return"D"+e/2;if(1===t)return null;for(let n of this.preferred){let i=e-2*n;if(i>0&&i<=60){let e="";if(50===i)e="Bull";else if(25===i)e="25";else if(i<=20)e=i;else if(i%2==0&&i<=40)e="D"+i/2;else if(i%3==0&&i<=60)e="T"+i/3;if(e)return`${e} D${n}`}}for(let n=60;n>=1;n--){let i=e-n;if(i>=2&&i<=40&&i%2==0){let t=this.fmt(n);if(t)return`${t} D${i/2}`}}if(2===t)return null;let n=e-60,i=this.solve(n,2);if(i)return`T20 ${i}`;n=e-57;i=this.solve(n,2);if(i)return`T19 ${i}`;if(170===e)return"T20 T20 Bull";return"Setup shot"},fmt:function(e){if(50===e)return"Bull";if(25===e)return"25";if(e<=20)return e;if(e<=40&&e%2==0)return"D"+e/2;if(e<=60&&e%3==0)return"T"+e/3;return null},getCheckout:function(e){if(e>350)return"";if(e>170){let t=e-170;if(t<=180){if(t<=60){let e=this.fmt(t);if(e)return`Score ${e} to leave 170`}return`Hit T20 to leave ${e-60}`}return""}if([169,168,166,165,163,162,159].includes(e)){return`No out. Hit T20 to leave ${e-60}`}let t=this.solve(e,3);return t?t:"Setup shot"}};
 
 // --- STATS & COACH ---
@@ -435,29 +487,47 @@ const Stats = {
     data: { 
         matches: [], friends: [], 
         records: { bobs: 0, rtc: 999, jdc: 0, cricket: 0, route121: 121 },
+        achievements: [], 
         leagueRank: 0, drillLevel: 0, heatmap: [], userName: "YOU", bestLeg: 999, highOut: 0, xp: 0, level: 1, theme: "default",
-        premierLeague: { active: false, week: 1, table: JSON.parse(JSON.stringify(PL_BOTS)) } 
+        premierLeague: { active: false, week: 1, table: JSON.parse(JSON.stringify(PL_BOTS)) },
+        wc: { active: false, round: 0 }
     },
     load: function() {
         try {
-            const e = localStorage.getItem("darts_v21");
+            const e = localStorage.getItem("darts_v23");
             if (e) {
                 this.data = JSON.parse(e);
                 if(!this.data.matches) this.data.matches = [];
-                if(!this.data.friends) this.data.friends = [];
-                if(!this.data.heatmap) this.data.heatmap = [];
-                if(!this.data.records) this.data.records = { bobs: 0, rtc: 999, jdc: 0, cricket: 0, route121: 121 };
-                if(!this.data.records.route121) this.data.records.route121 = 121;
-                if(!this.data.xp) this.data.xp = 0;
-                if(!this.data.premierLeague) this.data.premierLeague = { active: false, week: 1, table: JSON.parse(JSON.stringify(PL_BOTS)) };
+                if(!this.data.achievements) this.data.achievements = [];
+                if(!this.data.wc) this.data.wc = { active: false, round: 0 };
             }
             this.applyTheme();
         } catch(e) {}
         this.renderChart(); this.updateBadges(); this.renderXP();
     },
-    save: function() { localStorage.setItem("darts_v21", JSON.stringify(this.data)) },
+    save: function() { localStorage.setItem("darts_v23", JSON.stringify(this.data)) },
     setName: function(n) { this.data.userName = n; this.save(); },
     
+    unlock: function(id) {
+        if(!this.data.achievements.includes(id)) {
+            this.data.achievements.push(id);
+            this.save();
+            const t = TROPHIES.find(x => x.id === id);
+            alert(`🏆 ACHIEVEMENT UNLOCKED: ${t.name}\n${t.desc}`);
+        }
+    },
+    renderTrophies: function() {
+        const d = document.getElementById("trophy-list");
+        d.innerHTML = TROPHIES.map(t => {
+            const unlocked = this.data.achievements.includes(t.id);
+            return `<div class="trophy-card ${unlocked ? 'unlocked' : ''}">
+                <span class="trophy-icon">${t.icon}</span>
+                <span class="trophy-name">${t.name}</span>
+                <span class="trophy-desc">${t.desc}</span>
+            </div>`;
+        }).join("");
+    },
+
     addFriend: function() {
         const n = document.getElementById("new-player-name").value;
         if(n && !this.data.friends.includes(n)) {
@@ -482,7 +552,7 @@ const Stats = {
             try {
                 const imported = JSON.parse(e.target.result);
                 if (imported.xp !== undefined && imported.matches) {
-                    if(confirm("Overwrite career?")) { localStorage.setItem("darts_v21", JSON.stringify(imported)); location.reload(); }
+                    if(confirm("Overwrite career?")) { localStorage.setItem("darts_v23", JSON.stringify(imported)); location.reload(); }
                 } else { alert("Invalid backup."); }
             } catch (err) { alert("Error reading file."); }
         };
@@ -518,22 +588,26 @@ const Stats = {
         if (app.mode === "league" && BOTS[app.settings.botIdx]) oppName = BOTS[app.settings.botIdx].name;
         if (app.mode === "pvp") oppName = app.settings.pvpOpp || "Player 2";
         if (app.mode === "pl") oppName = "Premier League Bot";
+        if (app.mode === "wc") oppName = "World Champ Bot";
         
         this.data.matches.push({ 
             date: new Date().toLocaleDateString(), avg: parseFloat(avg), result: res, 
             type: "x01", opponent: oppName, checkoutPerc: missed+doubles > 0 ? Math.round((doubles / (doubles+missed))*100) : 0,
-            log: app.state.throwLog // SAVE THROW LOG FOR GHOSTS
+            log: app.state.throwLog 
         });
         if (this.data.matches.length > 50) this.data.matches.shift();
         if(res === "W") this.addXP(100); else this.addXP(20);
+        
+        if(this.data.matches.length >= 50) this.unlock('t_marathon');
+        
         this.save();
     },
     addResult: function(type, score, details) {
         this.data.matches.push({ date: new Date().toLocaleDateString(), type: type, avg: score, result: "N/A", opponent: details || "Drill", checkoutPerc: 0 });
-        if(type === 'bobs' && score > this.data.records.bobs) this.data.records.bobs = score;
+        if(type === 'bobs' && score > this.data.records.bobs) { this.data.records.bobs = score; if(score >= 300) this.unlock('t_27'); }
         if(type === 'jdc' && score > this.data.records.jdc) this.data.records.jdc = score;
         if(type === 'rtc' && score < this.data.records.rtc) this.data.records.rtc = score;
-        if(type === 'route121' && score > this.data.records.route121) this.data.records.route121 = score;
+        if(type === 'route121' && score > this.data.records.route121) { this.data.records.route121 = score; if(score>=150) this.unlock('t_routeman'); }
         if (this.data.matches.length > 50) this.data.matches.shift();
         this.addXP(30); this.save();
     },
@@ -544,8 +618,8 @@ const Stats = {
         prompt("Copy this Ghost Code:", code);
     },
     updateRecords: function(darts, checkout) {
-        if (darts >= 6 && darts < this.data.bestLeg) this.data.bestLeg = darts;
-        if (checkout > this.data.highOut) this.data.highOut = checkout;
+        if (darts >= 6 && darts < this.data.bestLeg) { this.data.bestLeg = darts; if(darts === 9) this.unlock('t_perfect'); }
+        if (checkout > this.data.highOut) { this.data.highOut = checkout; if(checkout === 170) this.unlock('t_bigfish'); if(checkout >= 100) this.unlock('t_century'); }
         this.save();
     },
     addHeatmapPoint: function(x, y) {
@@ -554,10 +628,11 @@ const Stats = {
         this.save();
     },
     updateLeague: function(e) { if(e === this.data.leagueRank){ this.data.leagueRank++; this.save(); } },
-    showHub: function() { document.getElementById("stats-modal").style.display = "flex"; this.switchTab('history'); },
+    showHub: function() { document.getElementById("stats-modal").style.display = "flex"; this.switchTab('history'); this.renderRivals(); },
     switchTab: function(tab) {
         document.getElementById("tab-history").style.display = tab === 'history' ? 'block' : 'none';
         document.getElementById("tab-pbs").style.display = tab === 'pbs' ? 'block' : 'none';
+        document.getElementById("tab-rivals").style.display = tab === 'rivals' ? 'block' : 'none';
         document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
         event.target.classList.add("active");
         if(tab === 'history') this.showHistory();
@@ -583,11 +658,25 @@ const Stats = {
             list.innerHTML += `<div class="hist-row ${cls}"><div><span class="hist-date">${m.date} - ${label}</span></div><div style="font-weight:bold;">${val}</div></div>`;
         });
     },
+    renderRivals: function() {
+        const d = document.getElementById("rivals-list");
+        if(d) {
+            d.innerHTML = "";
+            const counts = {};
+            this.data.matches.filter(m => (m.type === 'x01' || !m.type)).forEach(m => {
+                if(!counts[m.opponent]) counts[m.opponent] = { w:0, l:0 };
+                if(m.result === 'W') counts[m.opponent].w++; else counts[m.opponent].l++;
+            });
+            for (const [name, s] of Object.entries(counts)) {
+                d.innerHTML += `<div class="hist-row"><div>${name}</div><div>${s.w}W - ${s.l}L</div></div>`;
+            }
+        }
+    },
     exportData: function() {
         const e = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data));
         const t = document.createElement("a"); t.href = e; t.download = "dartsos_backup.json"; document.body.appendChild(t); t.click(); t.remove();
     },
-    clear: function() { if(confirm("Reset all data?")) { localStorage.removeItem("darts_v21"); location.reload(); } },
+    clear: function() { if(confirm("Reset all data?")) { localStorage.removeItem("darts_v23"); location.reload(); } },
     renderChart: function() {
         const e = document.getElementById("chart-area"); if(!e) return;
         const t = this.data.matches.filter(x => x.type === "x01" || !x.type);
@@ -609,6 +698,7 @@ const Stats = {
 
 const Coach = {
     analyze: function() {
+        Stats.unlock('t_coach');
         const m = Stats.data.matches ? Stats.data.matches.filter(x => x.type === 'x01' || !x.type) : [];
         const heat = Stats.data.heatmap || [];
         const box = document.getElementById("coach-content");
@@ -711,6 +801,7 @@ const app = {
         const v = document.getElementById("cam-feed");
         if(v.srcObject) v.srcObject.getTracks().forEach(t=>t.stop());
         document.getElementById("cam-container").classList.remove("active");
+        
         Stats.load();
     },
     
@@ -767,7 +858,13 @@ const app = {
         document.getElementById("scenario-modal").style.display = "none";
         const s = SCENARIOS[idx];
         this.mode = "scenario"; 
-        this.loadMode('league'); 
+        
+        // --- FIX: Force 1 leg for Scenarios ---
+        this.settings.legs = 1;
+
+        // --- FIX: Use dedicated load logic so we don't overwrite mode ---
+        this.loadMode('scenario'); 
+        
         this.state.score = s.p1;
         this.state.p2Score = s.p2;
         this.state.dartsInTurn = 0;
@@ -853,8 +950,42 @@ const app = {
         this.mode = "pl";
         document.getElementById("pl-modal").style.display = "none";
         this.settings.score = 501; this.settings.legs = 12; // Best of 12 logic handled in win check
-        this.loadMode("league");
+        
+        // --- FIX: Pass correct mode ---
+        this.loadMode("pl");
         document.getElementById("game-title").innerText = "Premier League";
+    },
+
+    // --- WORLD CHAMPIONSHIP ---
+    openWC: function() {
+        const wc = Stats.data.wc;
+        if(!wc.active) {
+            if(confirm("Start World Championship?")) {
+                wc.active = true; wc.round = 1; Stats.save();
+            } else return;
+        }
+        const r = wc.round;
+        let title = "Round 1 (Last 32)"; let sets = 3;
+        if(r===2) { title="Round 2 (Last 16)"; sets=4; }
+        if(r===3) { title="Quarter Final"; sets=5; }
+        if(r===4) { title="Semi Final"; sets=6; }
+        if(r===5) { title="FINAL"; sets=7; }
+
+        document.getElementById("wc-round-title").innerText = title;
+        document.getElementById("wc-sets-req").innerText = sets;
+        document.getElementById("wc-bracket-info").innerText = "The other 31 players are ready...";
+        document.getElementById("wc-modal").style.display = "flex";
+    },
+    playWCMatch: function() {
+        this.mode = "wc";
+        document.getElementById("wc-modal").style.display = "none";
+        this.settings.score = 501;
+        // Sets logic is handled in checkMatchWin
+        
+        // --- FIX: Call loadMode with 'wc' to prevent overwrite ---
+        this.loadMode("wc");
+        
+        document.getElementById("game-title").innerText = "World Championship";
     },
     
     startTournament: function() {
@@ -902,7 +1033,14 @@ const app = {
         const miss = this.state.matchMissedDoubles || 0; const hits = this.state.matchHitDoubles || 0;
         const rate = hits + miss > 0 ? Math.round((hits / (hits+miss))*100) + "%" : "--";
         setVal("rep-doubles", rate);
-        setVal("rep-score", `${this.state.matchScore[0]} - ${this.state.matchScore[1]}`);
+        
+        // DISPLAY SET SCORE IF IN WC
+        if(this.mode === "wc") {
+            setVal("rep-score", `Sets: ${this.state.sets[0]} - ${this.state.sets[1]}`);
+        } else {
+            setVal("rep-score", `${this.state.matchScore[0]} - ${this.state.matchScore[1]}`);
+        }
+        
         setVal("rep-100", this.state.stats.tons);
         setVal("rep-140", this.state.stats.superTons);
         setVal("rep-180", this.state.stats.maxes);
@@ -912,6 +1050,29 @@ const app = {
         setVal("rep-first9", f9);
 
         btn.onclick = () => { this.closeReport(); }; 
+
+        // WC LOGIC
+        if (this.mode === "wc") {
+             if(won) {
+                 const wc = Stats.data.wc;
+                 if(wc.round === 5) {
+                     // Won final
+                     Stats.unlock('t_champ');
+                     if(resTitle) { resTitle.innerText = "WORLD CHAMPION!"; resTitle.style.color="gold"; }
+                     if(msg) msg.innerText = "You have conquered the world!";
+                     wc.active = false;
+                 } else {
+                     wc.round++;
+                     if(resTitle) resTitle.innerText = "ROUND CLEARED";
+                     if(btn) { btn.innerText = "Next Round"; btn.onclick = () => { this.closeReport(); this.openWC(); }; }
+                 }
+                 Stats.save();
+             } else {
+                 if(resTitle) { resTitle.innerText = "ELIMINATED"; resTitle.style.color = "var(--danger)"; }
+                 Stats.data.wc.active = false; Stats.save();
+             }
+             return;
+        }
 
         if (this.mode === "pl") {
             const pl = Stats.data.premierLeague;
@@ -934,7 +1095,11 @@ const app = {
                 else { t.d++; t.pts+=1; }
             });
             pl.week++;
-            if(pl.week > 14) { alert("SEASON OVER!"); pl.active = false; }
+            if(pl.week > 14) { 
+                alert("SEASON OVER!"); pl.active = false; 
+                // Check if winner
+                if(pl.table[0].name === "YOU") Stats.unlock('t_pl');
+            }
             Stats.save();
             btn.innerText = "View Table";
             btn.onclick = () => { this.closeReport(); this.openPL(); };
@@ -967,6 +1132,7 @@ const app = {
         } else {
             if(msg) msg.style.display = "none";
             if(resTitle) { resTitle.innerText = won ? "VICTORY" : "DEFEAT"; resTitle.style.color = won ? "var(--primary)" : "var(--danger)"; }
+            if(btn) { btn.innerText = "Main Menu"; btn.onclick = () => { this.closeReport(); }; }
         }
     },
     closeReport: function() { document.getElementById("report-modal").style.display = "none"; this.goHome(); },
@@ -991,7 +1157,7 @@ const app = {
     numpadSubmit: function() {
         const e = parseInt(this.numpadBuffer);
         if (isNaN(e) || e > 180) { alert("Invalid"); this.numpadClear(); return; }
-        if (this.mode === "league" || this.mode === "pvp" || this.mode === "scenario" || this.mode === "ghost" || this.mode === "pl") { this.state.dartsInTurn = 3; this.logicX01(e, "S", true); }
+        if (this.mode === "league" || this.mode === "pvp" || this.mode === "scenario" || this.mode === "ghost" || this.mode === "pl" || this.mode === "wc") { this.state.dartsInTurn = 3; this.logicX01(e, "S", true); }
         else if (this.mode === "finisher") { this.logicFinisher(e, "S", true); }
         else if (this.mode === "route121") { this.logicRoute121(e, "S", true); }
         this.numpadClear();
@@ -1004,7 +1170,9 @@ const app = {
             currentPlayer: 1, starter: 1, 
             dartsInTurn: 0, turnScore: 0,
             legDarts: 0,
-            matchScore: [0, 0], matchTotalScore: 0, matchTotalDarts: 0,
+            matchScore: [0, 0], // Legs
+            sets: [0, 0], // NEW: SETS TRACKING
+            matchTotalScore: 0, matchTotalDarts: 0,
             matchMissedDoubles: 0, matchHitDoubles: 0,
             stats: { tons: 0, superTons: 0, maxes: 0, first9Score: 0, first9Darts: 0 },
             finisherLives: 3, finisherTarget: 0,
@@ -1032,7 +1200,8 @@ const app = {
 
         if(this.workout.active) document.getElementById("workout-banner").style.display = "block";
 
-        if (e === "league") this.setupLeague();
+        // --- FIX: Don't overwrite mode if it's already set to a special one ---
+        if (e === "league" || e === "wc" || e === "scenario" || e === "pl") this.setupLeague();
         else if (e === "rtc") this.setupRTC();
         else if (e === "pvp") this.setupPvP();
         else if (e === "bobs27") this.setupBobs27();
@@ -1166,6 +1335,14 @@ const app = {
         document.getElementById("status-msg").innerText=`Hit: ${type}${val}`;
         this.state.throwLog.push(n); if(this.state.throwLog.length>3) this.state.throwLog.shift();
         
+        // CHECK ACHIEVEMENTS
+        if(n===180) Stats.unlock('t_robin');
+        if(type==='D' && val===1) {
+            if(!this.state.d1Streak) this.state.d1Streak=0;
+            this.state.d1Streak++;
+            if(this.state.d1Streak >= 3) Stats.unlock('t_sniper');
+        } else { this.state.d1Streak=0; }
+
         if (this.mode==="cricket") this.logicCricket(val, type);
         else if (this.mode==="rtc") this.logicRTC(val, type);
         else if (this.mode.includes("league") || this.mode==="pvp") this.logicX01(n, type);
@@ -1177,6 +1354,7 @@ const app = {
         else if (this.mode==="route121") this.logicRoute121(n, type);
         else if (this.mode==="ghost") this.logicX01(n, type); // Ghost uses standard logic for P1
         else if (this.mode==="pl") this.logicX01(n, type);
+        else if (this.mode==="wc") this.logicX01(n, type);
     },
     
     // --- ROUTE 121 LOGIC ---
@@ -1294,6 +1472,7 @@ const app = {
         }
     },
     logicX01: function(pts, type, isManual) {
+        // --- SCENARIO MODE DART LIMIT CHECK ---
         if(this.mode === 'scenario') {
             this.state.matchTotalDarts++;
             if(this.state.matchTotalDarts > this.state.scenarioDarts) {
@@ -1332,6 +1511,11 @@ const app = {
                 }
                 Stats.updateRecords(this.state.legDarts, pts); 
             }
+            // --- FIX: Logic for scenario victory ---
+            if(this.mode === 'scenario') {
+                alert("CHALLENGE COMPLETE! +100 XP"); Stats.addXP(100); this.goHome(); return;
+            }
+            
             Speaker.speak("Game Shot", 100); this.checkMatchWin(); return;
         }
         
@@ -1363,16 +1547,54 @@ const app = {
                  return;
              }
         }
+
+        // --- FIX: SET PLAY LOGIC ---
+        if(this.mode === 'wc') {
+             const legsToWinSet = 3; 
+             const setsToWinMatch = Stats.data.wc.round === 5 ? 7 : (Stats.data.wc.round + 2); // R1=3, R2=4, etc.
+
+             if(this.state.matchScore[0] >= legsToWinSet) {
+                 this.state.sets[0]++;
+                 this.state.matchScore = [0,0]; // Reset legs
+                 alert(`SET WON! You lead ${this.state.sets[0]} - ${this.state.sets[1]}`);
+             } else if(this.state.matchScore[1] >= legsToWinSet) {
+                 this.state.sets[1]++;
+                 this.state.matchScore = [0,0];
+                 alert(`SET LOST! Trailing ${this.state.sets[0]} - ${this.state.sets[1]}`);
+             }
+
+             if(this.state.sets[0] >= setsToWinMatch) {
+                 const avg = this.state.matchTotalDarts > 0 ? (this.state.matchTotalScore / this.state.matchTotalDarts * 3).toFixed(1) : "0.0";
+                 app.showReport(true, avg); return;
+             } else if(this.state.sets[1] >= setsToWinMatch) {
+                 const avg = this.state.matchTotalDarts > 0 ? (this.state.matchTotalScore / this.state.matchTotalDarts * 3).toFixed(1) : "0.0";
+                 app.showReport(false, avg); return;
+             }
+             this.resetLeg();
+             return;
+        }
         
         if (this.state.matchScore[0] >= goal || this.state.matchScore[1] >= goal) {
             if (this.mode === "league" && this.state.matchScore[0] >= goal) Stats.updateLeague(this.state.botIdx);
-            const avg = this.state.matchTotalDarts > 0 ? (this.state.matchTotalScore / this.state.matchTotalDarts * 3).toFixed(1) : "0.0";
+            
+            // MATH FIX: Calculate global average
+            const avg = this.state.matchTotalDarts > 0 
+                ? (this.state.matchTotalScore / this.state.matchTotalDarts * 3).toFixed(1) 
+                : "0.0";
+            
+            // Add match result to detailed stats
             Stats.addMatch(avg, this.state.matchScore[0] >= goal ? "W":"L", this.state.matchHitDoubles, this.state.matchMissedDoubles);
             app.showReport(this.state.matchScore[0] >= goal, avg);
         } else { alert(`Leg Over. ${this.state.matchScore[0]} - ${this.state.matchScore[1]}`); this.resetLeg(); }
     },
     resetLeg: function() {
-        this.state.starter = this.state.starter === 1 ? 2 : 1;
+        // --- FIX: ALTERNATING STARTS (CORRECTED) ---
+        // If Leg 1 (matchScore 0-0): Starter is P1
+        // If Leg 2 (matchScore 1-0 or 0-1): Starter is P2
+        const totalLegs = this.state.matchScore[0] + this.state.matchScore[1];
+        // In Set play, restart order usually resets per set, but alternating per leg is simpler for now.
+        this.state.starter = (totalLegs % 2 === 0) ? 1 : 2; 
+        
         this.state.currentPlayer = this.state.starter;
         
         this.state.score = this.state.startScore; this.state.p2Score = this.state.startScore;
@@ -1381,13 +1603,9 @@ const app = {
         this.markerList = []; BoardRenderer.render(this.handleHit.bind(this)); this.updateUI();
         
         if(this.state.starter === 2) {
-            // Handle Ghost / League logic
             if(this.mode === 'ghost') {
-                if(this.ghost && this.ghost.moves && this.ghost.index < this.ghost.moves.length) {
-                    // Ghost logic would go here, simplified:
-                    setTimeout(() => this.botThrow(), 1000); 
-                }
-            } else if(this.mode === 'league' || this.mode === 'scenario' || this.mode === 'pl') {
+                if(this.ghost && this.ghost.moves && this.ghost.index < this.ghost.moves.length) { setTimeout(() => this.botThrow(), 1000); }
+            } else if(this.mode === 'league' || this.mode === 'scenario' || this.mode === 'pl' || this.mode === 'wc') {
                 setTimeout(() => this.botThrow(), 1000);
             }
         } else {
@@ -1396,7 +1614,7 @@ const app = {
     },
     botThrow: function() {
         document.getElementById("status-msg").innerText="Opponent throwing...";
-        const e = (this.mode === 'league' || this.mode === 'scenario' || this.mode === 'pl') ? BOTS[this.state.botIdx] : {avg:50, checkout:0.3};
+        const e = (this.mode === 'league' || this.mode === 'scenario' || this.mode === 'pl' || this.mode === 'wc') ? BOTS[this.state.botIdx] : {avg:50, checkout:0.3};
         
         setTimeout((()=>{
             // Simple Bot Logic
@@ -1414,7 +1632,15 @@ const app = {
         if(this.mode==="train_out" || this.mode==="finisher" || this.mode === "route121") return;
         const e1 = document.getElementById("hud-val-1"); if(e1) e1.innerText = this.state.score;
         const e2 = document.getElementById("hud-val-2"); if(e2) e2.innerText = this.state.p2Score;
-        const em = document.getElementById("match-score-display"); if(em) em.innerText = `${this.state.matchScore[0]} - ${this.state.matchScore[1]}`;
+        
+        // --- FIX: DISPLAY SET SCORE IF IN WC ---
+        let scoreTxt = `${this.state.matchScore[0]} - ${this.state.matchScore[1]}`;
+        if(this.mode === "wc") {
+             const sets = this.state.sets || [0,0];
+             scoreTxt = `S:${sets[0]}-${sets[1]} | L:${this.state.matchScore[0]}-${this.state.matchScore[1]}`;
+        }
+        const em = document.getElementById("match-score-display"); if(em) em.innerText = scoreTxt;
+        
         const p1 = document.getElementById("p1-box"); const p2 = document.getElementById("p2-box");
         if(p1 && p2) {
             if (this.state.currentPlayer === 1) { p1.classList.remove("inactive"); p2.classList.add("inactive"); }
@@ -1466,7 +1692,7 @@ const app = {
             Speaker.speak("Player "+this.state.currentPlayer, 0);
             this.updateUI(); BoardRenderer.render(this.handleHit.bind(this));
         }
-        else if ("league"===this.mode || "scenario"===this.mode || "pl"===this.mode) {
+        else if ("league"===this.mode || "scenario"===this.mode || "pl"===this.mode || "wc"===this.mode) {
             if(0===this.state.dartsInTurn&&"board"===this.inputMode)return;
             // Trigger Bot
             this.botThrow();
