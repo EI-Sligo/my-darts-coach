@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>DartsOS v23.1: Bug Fixes</title>
+    <title>DartsOS v24.0: The Professional</title>
     <style>
         :root {
             --bg: #121212; --panel: #1e1e1e; --primary: #00e676; --secondary: #2979ff; --danger: #ff1744;
@@ -52,9 +52,10 @@
         .hud-meta { font-size: 0.8rem; color: #888; margin-top: 5px; height: 20px; }
         .checkout-hint { background: #2e7d32; color: white; padding: 5px 10px; border-radius: 4px; font-size: 0.9rem; font-weight: bold; margin-top: 5px; display: inline-block; min-height: 20px; border: 1px solid #4caf50; }
         
-        /* MATCH CAM */
-        #cam-container { width: 100%; max-width: 450px; height: 0; background: #000; border-radius: 12px; margin-bottom: 10px; overflow: hidden; transition: height 0.3s; position: relative; }
+        /* MATCH CAM & LAB */
+        #cam-container, #lab-container { width: 100%; max-width: 450px; height: 0; background: #000; border-radius: 12px; margin-bottom: 10px; overflow: hidden; transition: height 0.3s; position: relative; }
         #cam-container.active { height: 250px; border: 1px solid #333; }
+        #lab-container.active { height: 350px; border: 1px solid var(--primary); }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 
         #board-container { width: 100%; max-width: 450px; aspect-ratio: 1/1; position: relative; margin: 10px 0; flex-shrink: 0; display: block; }
@@ -71,7 +72,7 @@
         .btn-miss { background: #424242; color: #ff5252; border: 1px solid #ff5252; flex: 0.4; }
         .rank-badge { background: var(--highlight); color: black; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; position: absolute; top: 10px; right: 10px; }
         
-        #setup-modal, #report-modal, #stats-modal, #coach-modal, #settings-modal, #scenario-modal, #players-modal, #pl-modal, #trophy-modal, #wc-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; overflow-y: auto; padding: 20px; box-sizing: border-box; }
+        #setup-modal, #report-modal, #stats-modal, #coach-modal, #settings-modal, #scenario-modal, #players-modal, #pl-modal, #trophy-modal, #wc-modal, #protour-modal, #lab-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; overflow-y: auto; padding: 20px; box-sizing: border-box; }
         .modal-card { background: var(--panel); padding: 30px; border-radius: 12px; text-align: center; width: 100%; max-width: 500px; border: 1px solid #333; }
         .modal-row { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
         select, input[type="text"], textarea { background: #333; color: white; padding: 10px; border: 1px solid #555; border-radius: 6px; font-size: 1.1rem; width: 100%; box-sizing: border-box; }
@@ -229,6 +230,37 @@
     </div>
 </div>
 
+<div id="protour-modal">
+    <div class="modal-card">
+        <h2 style="color:var(--secondary)">📅 Pro Tour Season</h2>
+        <div style="background:#222; padding:15px; border-radius:8px; margin-bottom:20px;">
+            <h3 id="pt-week">Week 1: Players Championship 1</h3>
+            <p id="pt-info" style="color:#aaa; font-size:0.9rem;">Floor Match - Best of 11</p>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+            <div style="text-align:center;">
+                <span style="font-size:0.8rem; color:#888;">Order of Merit</span><br>
+                <strong id="pt-rank" style="color:var(--highlight); font-size:1.5rem;">Unranked</strong>
+            </div>
+             <div style="text-align:center;">
+                <span style="font-size:0.8rem; color:#888;">Prize Money</span><br>
+                <strong id="pt-money" style="color:var(--primary); font-size:1.5rem;">£0</strong>
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="ProTour.startEvent()">Play Event</button>
+        <button class="btn" style="margin-top:10px;" onclick="document.getElementById('protour-modal').style.display='none'">Close</button>
+    </div>
+</div>
+
+<div id="lab-modal">
+    <div class="modal-card" style="max-width:600px;">
+        <h2>🔬 The Lab</h2>
+        <p style="color:#aaa; margin-bottom:15px;">Your landing spots over the last 500 darts.</p>
+        <div id="lab-board" style="width:100%; aspect-ratio:1/1; position:relative; background:#222; border-radius:50%;"></div>
+        <button class="btn" style="margin-top:10px;" onclick="document.getElementById('lab-modal').style.display='none'">Close</button>
+    </div>
+</div>
+
 <div id="settings-modal">
     <div class="modal-card">
         <h2>Settings</h2>
@@ -308,8 +340,9 @@
 
 <div id="screen-menu" class="screen active">
     <header>
-        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v23.1</span></h1>
+        <h1>🎯 DartsOS <span style="font-size:0.6em; background:var(--primary); color:#000; padding:2px 6px; border-radius:4px;">v24.0</span></h1>
         <div style="display:flex; gap:10px;">
+            <div class="icon-btn" onclick="document.getElementById('lab-modal').style.display='flex'; Lab.render()">🔬</div>
             <div class="icon-btn" onclick="document.getElementById('trophy-modal').style.display='flex'; Stats.renderTrophies()">🏆</div>
             <div class="icon-btn" onclick="document.getElementById('settings-modal').style.display='flex'">⚙️</div>
             <div class="icon-btn" onclick="Coach.analyze()">🎓</div>
@@ -335,6 +368,11 @@
         </div>
 
         <div class="menu-grid">
+            
+            <div class="menu-card" style="grid-column: span 2; background: linear-gradient(135deg, #00695c, #004d40); border-color: var(--primary);" onclick="app.openProTour()">
+                <span style="font-size:2rem">📅</span><br><b style="color:var(--primary)">THE PRO TOUR</b><br><span style="font-size:0.8rem; color:#aaa">Full Career Mode</span>
+            </div>
+
             <div class="menu-card" style="grid-column: span 2; background: linear-gradient(135deg, #1e1e1e, #ffd700); border-color: var(--highlight); color:black;" onclick="app.openWC()">
                 <span style="font-size:2rem">🌍</span><br><b>WORLD CHAMPIONSHIP</b><br><span style="font-size:0.8rem;">Set Play Format</span>
             </div>
@@ -464,7 +502,55 @@ const PL_BOTS = [
     {name:"Cross", p:0, w:0, d:0, l:0, pd:0, pts:0}
 ];
 
-// --- TROPHIES ---
+const WC_PLAYERS = [
+    { name: "Luke Littler", avg: 105, checkout: 0.60 },
+    { name: "Luke Humphries", avg: 103, checkout: 0.55 },
+    { name: "Gian van Veen", avg: 100, checkout: 0.50 },
+    { name: "Michael van Gerwen", avg: 99, checkout: 0.50 },
+    { name: "Gary Anderson", avg: 98, checkout: 0.48 },
+    { name: "Rob Cross", avg: 97, checkout: 0.45 },
+    { name: "Gerwyn Price", avg: 96, checkout: 0.45 },
+    { name: "Michael Smith", avg: 96, checkout: 0.45 },
+    { name: "Nathan Aspinall", avg: 95, checkout: 0.42 },
+    { name: "Jonny Clayton", avg: 95, checkout: 0.42 },
+    { name: "Stephen Bunting", avg: 95, checkout: 0.42 },
+    { name: "Ryan Searle", avg: 94, checkout: 0.40 },
+    { name: "Josh Rock", avg: 94, checkout: 0.40 },
+    { name: "Danny Noppert", avg: 93, checkout: 0.40 },
+    { name: "James Wade", avg: 93, checkout: 0.50 },
+    { name: "Chris Dobey", avg: 93, checkout: 0.40 },
+    { name: "Damon Heta", avg: 92, checkout: 0.38 },
+    { name: "Ross Smith", avg: 92, checkout: 0.38 },
+    { name: "Dave Chisnall", avg: 92, checkout: 0.38 },
+    { name: "Dimitri Van den Bergh", avg: 91, checkout: 0.35 },
+    { name: "Dirk van Duijvenbode", avg: 91, checkout: 0.35 },
+    { name: "Joe Cullen", avg: 90, checkout: 0.35 },
+    { name: "Peter Wright", avg: 90, checkout: 0.35 },
+    { name: "Raymond van Barneveld", avg: 89, checkout: 0.40 },
+    { name: "Gabriel Clemens", avg: 89, checkout: 0.35 },
+    { name: "Krzysztof Ratajski", avg: 88, checkout: 0.35 },
+    { name: "Fallon Sherrock", avg: 87, checkout: 0.30 },
+    { name: "Beau Greaves", avg: 86, checkout: 0.30 },
+    { name: "Paul Lim", avg: 85, checkout: 0.25 },
+    { name: "Leonard Gates", avg: 84, checkout: 0.25 },
+    { name: "Nitin Kumar", avg: 82, checkout: 0.20 },
+    { name: "David Munyua", avg: 80, checkout: 0.15 }
+];
+
+const PRO_TOUR_CALENDAR = [
+    { name: "Players Champ 1", type: "floor", money: 12000 },
+    { name: "Players Champ 2", type: "floor", money: 12000 },
+    { name: "Players Champ 3", type: "floor", money: 12000 },
+    { name: "UK Open", type: "major", money: 110000 },
+    { name: "Players Champ 4", type: "floor", money: 12000 },
+    { name: "Players Champ 5", type: "floor", money: 12000 },
+    { name: "World Matchplay", type: "major", money: 200000 },
+    { name: "Players Champ 6", type: "floor", money: 12000 },
+    { name: "World Grand Prix", type: "major", money: 120000 },
+    { name: "Grand Slam", type: "major", money: 150000 },
+    { name: "World Championship", type: "major", money: 500000 }
+];
+
 const TROPHIES = [
     { id: 't_sniper', name: 'Sniper', desc: 'Hit Double 1 three times in a match', icon: '🎯' },
     { id: 't_bigfish', name: 'Big Fish', desc: 'Checkout 170', icon: '🐟' },
@@ -490,22 +576,24 @@ const Stats = {
         achievements: [], 
         leagueRank: 0, drillLevel: 0, heatmap: [], userName: "YOU", bestLeg: 999, highOut: 0, xp: 0, level: 1, theme: "default",
         premierLeague: { active: false, week: 1, table: JSON.parse(JSON.stringify(PL_BOTS)) },
-        wc: { active: false, round: 0 }
+        wc: { active: false, round: 0, opponentIdx: 0 },
+        proTour: { week: 0, money: 0, rank: 128, history: [] } // NEW PRO TOUR DATA
     },
     load: function() {
         try {
-            const e = localStorage.getItem("darts_v23");
+            const e = localStorage.getItem("darts_v24");
             if (e) {
                 this.data = JSON.parse(e);
                 if(!this.data.matches) this.data.matches = [];
                 if(!this.data.achievements) this.data.achievements = [];
-                if(!this.data.wc) this.data.wc = { active: false, round: 0 };
+                if(!this.data.wc) this.data.wc = { active: false, round: 0, opponentIdx: 0 };
+                if(!this.data.proTour) this.data.proTour = { week: 0, money: 0, rank: 128, history: [] };
             }
             this.applyTheme();
         } catch(e) {}
         this.renderChart(); this.updateBadges(); this.renderXP();
     },
-    save: function() { localStorage.setItem("darts_v23", JSON.stringify(this.data)) },
+    save: function() { localStorage.setItem("darts_v24", JSON.stringify(this.data)) },
     setName: function(n) { this.data.userName = n; this.save(); },
     
     unlock: function(id) {
@@ -552,7 +640,7 @@ const Stats = {
             try {
                 const imported = JSON.parse(e.target.result);
                 if (imported.xp !== undefined && imported.matches) {
-                    if(confirm("Overwrite career?")) { localStorage.setItem("darts_v23", JSON.stringify(imported)); location.reload(); }
+                    if(confirm("Overwrite career?")) { localStorage.setItem("darts_v24", JSON.stringify(imported)); location.reload(); }
                 } else { alert("Invalid backup."); }
             } catch (err) { alert("Error reading file."); }
         };
@@ -588,7 +676,7 @@ const Stats = {
         if (app.mode === "league" && BOTS[app.settings.botIdx]) oppName = BOTS[app.settings.botIdx].name;
         if (app.mode === "pvp") oppName = app.settings.pvpOpp || "Player 2";
         if (app.mode === "pl") oppName = "Premier League Bot";
-        if (app.mode === "wc") oppName = "World Champ Bot";
+        if (app.mode === "wc") oppName = WC_PLAYERS[Stats.data.wc.opponentIdx].name;
         
         this.data.matches.push({ 
             date: new Date().toLocaleDateString(), avg: parseFloat(avg), result: res, 
@@ -676,7 +764,7 @@ const Stats = {
         const e = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(this.data));
         const t = document.createElement("a"); t.href = e; t.download = "dartsos_backup.json"; document.body.appendChild(t); t.click(); t.remove();
     },
-    clear: function() { if(confirm("Reset all data?")) { localStorage.removeItem("darts_v23"); location.reload(); } },
+    clear: function() { if(confirm("Reset all data?")) { localStorage.removeItem("darts_v24"); location.reload(); } },
     renderChart: function() {
         const e = document.getElementById("chart-area"); if(!e) return;
         const t = this.data.matches.filter(x => x.type === "x01" || !x.type);
@@ -730,6 +818,85 @@ const SCENARIOS = [
     { title: "World Final Decider", desc: "Sudden death leg. 85 left. Opponent is on 32.", p1: 85, p2: 32, darts: 6 }
 ];
 
+// --- PRO TOUR CONTROLLER ---
+const ProTour = {
+    open: function() {
+        const pt = Stats.data.proTour;
+        if(pt.week >= PRO_TOUR_CALENDAR.length) {
+            alert("Season Complete! Final Rank: " + pt.rank);
+            return;
+        }
+        const event = PRO_TOUR_CALENDAR[pt.week];
+        document.getElementById("pt-week").innerText = `Week ${pt.week + 1}: ${event.name}`;
+        document.getElementById("pt-info").innerText = `${event.type === 'major' ? 'Major Title' : 'Floor Event'} | Prize: £${event.money}`;
+        document.getElementById("pt-money").innerText = `£${pt.money}`;
+        document.getElementById("pt-rank").innerText = pt.rank > 0 ? `#${pt.rank}` : "Unranked";
+        document.getElementById("protour-modal").style.display = "flex";
+    },
+    startEvent: function() {
+        document.getElementById("protour-modal").style.display = "none";
+        const event = PRO_TOUR_CALENDAR[Stats.data.proTour.week];
+        app.mode = "protour";
+        
+        // Setup match based on event type
+        if(event.type === 'major') {
+            app.settings.legs = 10; // Long format for majors
+            app.settings.score = 501;
+        } else {
+            app.settings.legs = 6; // Floor event
+            app.settings.score = 501;
+        }
+        // Random pro opponent
+        const rand = Math.floor(Math.random() * WC_PLAYERS.length);
+        app.settings.botIdx = rand; // Reuse this field to store opp index for now
+        
+        app.loadMode('league'); // Re-use league logic but with pro tour flags
+        document.getElementById("game-title").innerText = event.name;
+        // Override opponent name in UI
+        document.getElementById("hud-lbl-2").innerText = WC_PLAYERS[rand].name;
+    },
+    completeEvent: function(won) {
+        const pt = Stats.data.proTour;
+        const event = PRO_TOUR_CALENDAR[pt.week];
+        
+        if(won) {
+            alert(`WINNER! You won ${event.name} and £${event.money}`);
+            pt.money += event.money;
+            // Simple rank simulation
+            pt.rank = Math.max(1, pt.rank - Math.floor(Math.random()*10 + 5));
+        } else {
+            alert("Eliminated. Better luck next week.");
+            // Rank might drop
+            pt.rank = Math.min(128, pt.rank + Math.floor(Math.random()*2));
+        }
+        pt.week++;
+        Stats.save();
+        app.goHome();
+    }
+};
+
+// --- THE LAB ---
+const Lab = {
+    render: function() {
+        const d = document.getElementById("lab-board");
+        d.innerHTML = "";
+        // Draw basic board circle
+        const board = document.createElement("div");
+        board.style.cssText = "width:100%;height:100%;border-radius:50%;background:repeating-conic-gradient(#000 0deg 9deg, #f5f5f5 9deg 18deg);opacity:0.2;";
+        d.appendChild(board);
+        
+        // Plot dots
+        Stats.data.heatmap.forEach(pt => {
+            const dot = document.createElement("div");
+            // Mapping raw SVG coords (0-500) to percentage for this container
+            const left = (pt.x / 500) * 100;
+            const top = (pt.y / 500) * 100;
+            dot.style.cssText = `position:absolute;left:${left}%;top:${top}%;width:4px;height:4px;background:red;border-radius:50%;pointer-events:none;`;
+            d.appendChild(dot);
+        });
+    }
+};
+
 // --- RENDERER ---
 const BoardRenderer = {
     render: function(cb, showHeat, markers=[]) {
@@ -739,6 +906,7 @@ const BoardRenderer = {
         const n = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         n.setAttribute("viewBox", "0 0 500 500"); n.id = "dartboard-svg";
         const a = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5], r = 250;
+        
         const style = getComputedStyle(document.body);
         const cGreen = style.getPropertyValue('--board-green').trim();
         const cRed = style.getPropertyValue('--board-red').trim();
@@ -816,6 +984,11 @@ const app = {
                 .then(s => { v.srcObject = s; c.classList.add("active"); })
                 .catch(e => alert("Camera error: " + e));
         }
+    },
+    
+    // --- PRO TOUR HOOKS ---
+    openProTour: function() {
+        ProTour.open();
     },
 
     // --- SMART LAB ---
@@ -966,14 +1139,23 @@ const app = {
         }
         const r = wc.round;
         let title = "Round 1 (Last 32)"; let sets = 3;
-        if(r===2) { title="Round 2 (Last 16)"; sets=4; }
-        if(r===3) { title="Quarter Final"; sets=5; }
-        if(r===4) { title="Semi Final"; sets=6; }
-        if(r===5) { title="FINAL"; sets=7; }
+        // Selection Logic based on Round
+        let min=0, max=0;
+        if(r===1) { min=16; max=31; } // Bottom 16 players
+        else if(r===2) { title="Round 2 (Last 16)"; sets=4; min=8; max=15; }
+        else if(r===3) { title="Quarter Final"; sets=5; min=4; max=7; }
+        else if(r===4) { title="Semi Final"; sets=6; min=2; max=3; }
+        else if(r===5) { title="FINAL"; sets=7; min=0; max=1; }
 
+        // Pick random opp from range
+        const idx = Math.floor(Math.random() * (max - min + 1)) + min;
+        wc.opponentIdx = idx;
+        Stats.save();
+
+        const opp = WC_PLAYERS[idx];
         document.getElementById("wc-round-title").innerText = title;
         document.getElementById("wc-sets-req").innerText = sets;
-        document.getElementById("wc-bracket-info").innerText = "The other 31 players are ready...";
+        document.getElementById("wc-bracket-info").innerText = `Next Opponent: ${opp.name} (Avg: ${opp.avg})`;
         document.getElementById("wc-modal").style.display = "flex";
     },
     playWCMatch: function() {
@@ -985,7 +1167,8 @@ const app = {
         // --- FIX: Call loadMode with 'wc' to prevent overwrite ---
         this.loadMode("wc");
         
-        document.getElementById("game-title").innerText = "World Championship";
+        // --- FIX: SHOW REAL OPPONENT NAME ---
+        document.getElementById("game-title").innerText = "Vs " + WC_PLAYERS[Stats.data.wc.opponentIdx].name;
     },
     
     startTournament: function() {
@@ -1050,6 +1233,12 @@ const app = {
         setVal("rep-first9", f9);
 
         btn.onclick = () => { this.closeReport(); }; 
+
+        // PRO TOUR LOGIC
+        if (this.mode === "protour") {
+            ProTour.completeEvent(won);
+            return;
+        }
 
         // WC LOGIC
         if (this.mode === "wc") {
@@ -1157,7 +1346,9 @@ const app = {
     numpadSubmit: function() {
         const e = parseInt(this.numpadBuffer);
         if (isNaN(e) || e > 180) { alert("Invalid"); this.numpadClear(); return; }
-        if (this.mode === "league" || this.mode === "pvp" || this.mode === "scenario" || this.mode === "ghost" || this.mode === "pl" || this.mode === "wc") { this.state.dartsInTurn = 3; this.logicX01(e, "S", true); }
+        if (this.mode === "league" || this.mode === "pvp" || this.mode === "scenario" || this.mode === "ghost" || this.mode === "pl" || this.mode === "wc" || this.mode === "protour") { 
+            this.state.dartsInTurn = 3; this.logicX01(e, "S", true); 
+        }
         else if (this.mode === "finisher") { this.logicFinisher(e, "S", true); }
         else if (this.mode === "route121") { this.logicRoute121(e, "S", true); }
         this.numpadClear();
@@ -1201,7 +1392,7 @@ const app = {
         if(this.workout.active) document.getElementById("workout-banner").style.display = "block";
 
         // --- FIX: Don't overwrite mode if it's already set to a special one ---
-        if (e === "league" || e === "wc" || e === "scenario" || e === "pl") this.setupLeague();
+        if (e === "league" || e === "wc" || e === "scenario" || e === "pl" || e === "protour") this.setupLeague();
         else if (e === "rtc") this.setupRTC();
         else if (e === "pvp") this.setupPvP();
         else if (e === "bobs27") this.setupBobs27();
@@ -1355,6 +1546,7 @@ const app = {
         else if (this.mode==="ghost") this.logicX01(n, type); // Ghost uses standard logic for P1
         else if (this.mode==="pl") this.logicX01(n, type);
         else if (this.mode==="wc") this.logicX01(n, type);
+        else if (this.mode==="protour") this.logicX01(n, type);
     },
     
     // --- ROUTE 121 LOGIC ---
@@ -1531,6 +1723,9 @@ const app = {
                 if(this.state.turnScore >= 100 && this.state.turnScore < 140) { this.state.stats.tons++; Stats.addXP(10); }
                 else if(this.state.turnScore >= 140 && this.state.turnScore < 180) { this.state.stats.superTons++; Stats.addXP(20); }
                 else if(this.state.turnScore === 180) { this.state.stats.maxes++; Stats.addXP(50); }
+                
+                // --- FIX: AUTO NEXT TURN LOGIC ---
+                setTimeout(() => app.handleAction(), 800);
             }
         }
         this.updateUI();
@@ -1605,7 +1800,7 @@ const app = {
         if(this.state.starter === 2) {
             if(this.mode === 'ghost') {
                 if(this.ghost && this.ghost.moves && this.ghost.index < this.ghost.moves.length) { setTimeout(() => this.botThrow(), 1000); }
-            } else if(this.mode === 'league' || this.mode === 'scenario' || this.mode === 'pl' || this.mode === 'wc') {
+            } else if(this.mode === 'league' || this.mode === 'scenario' || this.mode === 'pl' || this.mode === 'wc' || this.mode === 'protour') {
                 setTimeout(() => this.botThrow(), 1000);
             }
         } else {
@@ -1614,7 +1809,19 @@ const app = {
     },
     botThrow: function() {
         document.getElementById("status-msg").innerText="Opponent throwing...";
-        const e = (this.mode === 'league' || this.mode === 'scenario' || this.mode === 'pl' || this.mode === 'wc') ? BOTS[this.state.botIdx] : {avg:50, checkout:0.3};
+        // --- FIX: CORRECT OPPONENT SELECTION ---
+        let e;
+        if(this.mode === 'wc') {
+             e = WC_PLAYERS[Stats.data.wc.opponentIdx];
+        } else if(this.mode === 'pl') {
+             e = {avg:97, checkout:0.45}; 
+        } else if(this.mode === 'protour') {
+             e = {avg:90, checkout:0.4}; // Generic Pro Tour stats
+        } else if(this.mode === 'league' || this.mode === 'scenario') {
+             e = BOTS[this.state.botIdx];
+        } else {
+             e = {avg:50, checkout:0.3};
+        }
         
         setTimeout((()=>{
             // Simple Bot Logic
@@ -1648,6 +1855,16 @@ const app = {
         }
         document.getElementById("checkout-display").innerText = Strategist.getCheckout(1 === this.state.currentPlayer ? this.state.score : this.state.p2Score);
         document.getElementById("p1-meta").innerText = 1===this.state.currentPlayer ? this.state.throwLog.join(", ") : "";
+
+        // --- FIX: UPDATE OPPONENT NAME IN HUD ---
+        let oppLabel = "BOT";
+        if (this.mode === 'wc') oppLabel = WC_PLAYERS[Stats.data.wc.opponentIdx].name;
+        else if (this.mode === 'league') oppLabel = BOTS[this.settings.botIdx].name;
+        else if (this.mode === 'pvp') oppLabel = this.settings.pvpOpp;
+        else if (this.mode === 'pl') oppLabel = "PL Bot"; // Simplified
+        
+        const lbl2 = document.getElementById("hud-lbl-2");
+        if(lbl2) lbl2.innerText = oppLabel;
     },
     logicBobs: function(val, type) {
         if (this.state.dartsInTurn >= 3) return;
@@ -1692,7 +1909,7 @@ const app = {
             Speaker.speak("Player "+this.state.currentPlayer, 0);
             this.updateUI(); BoardRenderer.render(this.handleHit.bind(this));
         }
-        else if ("league"===this.mode || "scenario"===this.mode || "pl"===this.mode || "wc"===this.mode) {
+        else if ("league"===this.mode || "scenario"===this.mode || "pl"===this.mode || "wc"===this.mode || "protour"===this.mode) {
             if(0===this.state.dartsInTurn&&"board"===this.inputMode)return;
             // Trigger Bot
             this.botThrow();
